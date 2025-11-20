@@ -1,0 +1,41 @@
+{
+    "name": "fullstack-todo-monorepo",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Full-stack todo app with microservices, K8s, and CI/CD",
+    "workspaces": [
+      "services/*",
+      "frontend",
+      "packages/*"
+    ],
+  "scripts": {
+    "dev:auth": "pnpm --filter auth-service dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:all": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "build:auth": "pnpm --filter auth-service build",
+    "build:frontend": "pnpm --filter frontend build",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,yml,yaml,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,yml,yaml,md}\"",
+    "type-check": "tsc --noEmit",
+    "test": "pnpm -r test",
+    "test:auth": "pnpm --filter auth-service test",
+    "clean": "pnpm -r exec rm -rf dist node_modules .tsbuildinfo"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "prettier": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  }
+  }

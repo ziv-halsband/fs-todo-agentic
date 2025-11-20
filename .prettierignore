@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+dist
+build
+out
+*.tsbuildinfo
+
+# Coverage
+coverage
+
+# Database
+prisma/migrations
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# Cache
+.cache
+.parcel-cache
+.next
+.nuxt
+.vuepress/dist
+
+# IDE
+.vscode
+.idea
+
+# Misc
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+

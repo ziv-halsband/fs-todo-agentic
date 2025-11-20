@@ -1,0 +1,171 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+*.lcov
+.nyc_output
+
+# Production builds
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# IDEs and editors
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.history/
+
+# Docker
+*.dockerfile.build
+docker-compose.override.yml
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+secrets.yaml
+*.secret.yaml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+postgres_data/
+mysql_data/
+mongodb_data/
+
+# Prisma
+.env.prisma
+prisma/migrations/**/*.sql.bak
+
+# Redis
+dump.rdb
+redis_data/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!terraform.tfvars.example
+
+# AWS
+.aws/
+*.pem
+*.key
+
+# Certificates and keys
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Cache
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist
+
+# Misc
+.eslintcache
+.stylelintcache
+*.pid
+*.seed
+*.pid.lock
+
+# Yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Frontend specific
+.vite/
+.turbo/
+storybook-static/
+
+# AI and ML
+*.model
+*.h5
+*.pkl
+*.joblib
+
+# Monitoring and observability
+grafana_data/
+prometheus_data/
+
