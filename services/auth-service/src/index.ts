@@ -9,8 +9,8 @@ const port = process.env.PORT || 3001;
 
 // Missing type annotation
 function greet(name: string) {
-  console.log(`Hello ${  name}`); // ❌ Bad: string concat, no semicolon
-  return name.toUpperCase(); // ❌ Bad: no semicolon
+  console.log(`Hello ${name}`);
+  return name.toUpperCase();
 }
 
 // Missing await
