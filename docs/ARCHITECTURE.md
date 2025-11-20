@@ -39,6 +39,7 @@
 ### Auth Service (Port 3001)
 
 **Responsibilities:**
+
 - User registration and authentication
 - Password hashing and validation
 - JWT token generation and validation
@@ -75,17 +76,18 @@ TTL: 7 days
 
 **API Endpoints:**
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/api/auth/signup` | Register new user | No |
-| POST | `/api/auth/login` | Authenticate user | No |
-| POST | `/api/auth/logout` | Invalidate session | Yes |
-| GET | `/api/auth/me` | Get current user | Yes |
-| POST | `/api/auth/refresh` | Refresh JWT token | Yes |
-| PATCH | `/api/auth/profile` | Update profile | Yes |
-| POST | `/api/auth/change-password` | Change password | Yes |
+| Method | Endpoint                    | Description        | Auth Required |
+| ------ | --------------------------- | ------------------ | ------------- |
+| POST   | `/api/auth/signup`          | Register new user  | No            |
+| POST   | `/api/auth/login`           | Authenticate user  | No            |
+| POST   | `/api/auth/logout`          | Invalidate session | Yes           |
+| GET    | `/api/auth/me`              | Get current user   | Yes           |
+| POST   | `/api/auth/refresh`         | Refresh JWT token  | Yes           |
+| PATCH  | `/api/auth/profile`         | Update profile     | Yes           |
+| POST   | `/api/auth/change-password` | Change password    | Yes           |
 
 **Environment Variables:**
+
 ```bash
 PORT=3001
 NODE_ENV=development
@@ -101,6 +103,7 @@ CORS_ORIGIN=http://localhost:3000
 ### Todo Service (Port 3002) - Phase 2
 
 **Responsibilities:**
+
 - CRUD operations for todos
 - Todo sharing and collaboration
 - Permission management (RBAC)
@@ -137,6 +140,7 @@ CREATE TABLE todo_permissions (
 ## Frontend Application (Port 3000)
 
 **Architecture:**
+
 - Component-based architecture
 - Container/Presentational pattern
 - Custom hooks for business logic
@@ -144,6 +148,7 @@ CREATE TABLE todo_permissions (
 - React Query for server state (future)
 
 **Directory Structure:**
+
 ```
 frontend/
 ├── src/
@@ -212,6 +217,7 @@ frontend/
 **Purpose:** Shared types and utilities for all services
 
 **Exports:**
+
 ```typescript
 // Types
 export interface User {
@@ -250,10 +256,15 @@ export function formatDate(date: Date): string;
 **Purpose:** Shared backend utilities, middleware, and clients
 
 **Exports:**
+
 ```typescript
 // Database clients
-export class PrismaClient { /* ... */ }
-export class RedisClient { /* ... */ }
+export class PrismaClient {
+  /* ... */
+}
+export class RedisClient {
+  /* ... */
+}
 
 // Middleware
 export function authMiddleware(req, res, next);
@@ -261,7 +272,9 @@ export function errorHandler(err, req, res, next);
 export function validateRequest(schema);
 
 // Utilities
-export class Logger { /* ... */ }
+export class Logger {
+  /* ... */
+}
 export function generateJWT(payload): string;
 export function verifyJWT(token): Payload;
 export function hashPassword(password): Promise<string>;
@@ -276,31 +289,33 @@ export function comparePassword(password, hash): Promise<boolean>;
 services:
   postgres:
     image: postgres:16-alpine
-    ports: ["5432:5432"]
+    ports: ['5432:5432']
     volumes: [postgres_data:/var/lib/postgresql/data]
-    
+
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
-    
+    ports: ['6379:6379']
+
   auth-service:
     build: ./services/auth-service
-    ports: ["3001:3001"]
+    ports: ['3001:3001']
     depends_on: [postgres, redis]
-    
+
   frontend:
     build: ./frontend
-    ports: ["3000:3000"]
+    ports: ['3000:3000']
     depends_on: [auth-service]
 ```
 
 ### Kubernetes (Minikube/EKS)
 
 **Namespaces:**
+
 - `dev` - Development environment
 - `prod` - Production environment
 
 **Resources per Service:**
+
 - Deployment (2-3 replicas)
 - Service (ClusterIP for internal, LoadBalancer for external)
 - ConfigMap (environment variables)
@@ -308,6 +323,7 @@ services:
 - HorizontalPodAutoscaler (auto-scaling)
 
 **Storage:**
+
 - StatefulSet for PostgreSQL
 - StatefulSet for Redis
 - PersistentVolumeClaim for data persistence
@@ -315,6 +331,7 @@ services:
 ## Security Considerations
 
 ### Authentication & Authorization
+
 - JWT tokens with short expiration (15 minutes)
 - Refresh tokens stored in HTTP-only cookies (7 days)
 - Session validation in Redis on every request
@@ -322,6 +339,7 @@ services:
 - Rate limiting on auth endpoints (5 attempts per 15 minutes)
 
 ### Data Protection
+
 - Passwords hashed with bcrypt (10 rounds)
 - Environment variables for secrets
 - Kubernetes secrets for production
@@ -329,6 +347,7 @@ services:
 - SQL injection prevention with Prisma
 
 ### Network Security
+
 - HTTPS only in production
 - API Gateway/Ingress controller
 - Private subnets for databases
@@ -347,18 +366,21 @@ services:
 ## Scalability Considerations
 
 ### Horizontal Scaling
+
 - Stateless services (scale easily)
 - Session data in Redis (shared across instances)
 - Load balancer distributes traffic
 - K8s HPA based on CPU/memory
 
 ### Database Optimization
+
 - Indexes on frequently queried columns
 - Connection pooling with Prisma
 - Read replicas for read-heavy operations
 - Caching with Redis
 
 ### Performance
+
 - Response compression (gzip)
 - Static asset CDN
 - Database query optimization
@@ -374,4 +396,3 @@ services:
 - Infrastructure as Code (Terraform)
 - GitOps with ArgoCD
 - Rollback strategies
-

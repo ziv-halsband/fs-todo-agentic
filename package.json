@@ -1,13 +1,13 @@
 {
-    "name": "fullstack-todo-monorepo",
-    "version": "1.0.0",
-    "private": true,
-    "description": "Full-stack todo app with microservices, K8s, and CI/CD",
-    "workspaces": [
-      "services/*",
-      "frontend",
-      "packages/*"
-    ],
+  "name": "fullstack-todo-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Full-stack todo app with microservices, K8s, and CI/CD",
+  "workspaces": [
+    "services/*",
+    "frontend",
+    "packages/*"
+  ],
   "scripts": {
     "dev:auth": "pnpm --filter auth-service dev",
     "dev:frontend": "pnpm --filter frontend dev",
@@ -38,4 +38,4 @@
     "node": ">=22.0.0",
     "pnpm": ">=10.0.0"
   }
-  }
+}

@@ -3,6 +3,7 @@
 ## General Principles
 
 ### SOLID Principles
+
 - **Single Responsibility**: Each module/class has one reason to change
 - **Open/Closed**: Open for extension, closed for modification
 - **Liskov Substitution**: Subtypes must be substitutable for base types
@@ -10,11 +11,13 @@
 - **Dependency Inversion**: Depend on abstractions, not concretions
 
 ### DRY (Don't Repeat Yourself)
+
 - Extract common logic to shared packages
 - Create reusable utilities and helpers
 - Use composition over duplication
 
 ### KISS (Keep It Simple, Stupid)
+
 - Prefer simple solutions over complex ones
 - Write clear, readable code
 - Avoid premature optimization
@@ -22,6 +25,7 @@
 ## TypeScript
 
 ### File Naming
+
 ```
 PascalCase     → Components, Classes:     UserProfile.tsx, AuthService.ts
 camelCase      → Files, Functions:        userUtils.ts, formatDate.ts
@@ -30,6 +34,7 @@ UPPER_CASE     → Constants, Env:          MAX_RETRIES, DATABASE_URL
 ```
 
 ### Type Definitions
+
 ```typescript
 // ✅ Good: Explicit types
 interface User {
@@ -50,10 +55,7 @@ function getUser(id) {
 // ✅ Good: Type guards
 function isUser(obj: unknown): obj is User {
   return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'id' in obj &&
-    'email' in obj
+    typeof obj === 'object' && obj !== null && 'id' in obj && 'email' in obj
   );
 }
 
@@ -75,6 +77,7 @@ const role = 'admin' as const; // type: 'admin'
 ```
 
 ### Enums vs Unions
+
 ```typescript
 // ✅ Prefer: String literal unions (tree-shakeable)
 export type HttpStatus = 'ok' | 'error' | 'pending';
@@ -83,7 +86,7 @@ export type HttpStatus = 'ok' | 'error' | 'pending';
 export enum HttpStatus {
   OK = 'ok',
   ERROR = 'error',
-  PENDING = 'pending'
+  PENDING = 'pending',
 }
 
 // ✅ Good: Const object for grouped constants
@@ -93,10 +96,11 @@ export const HTTP_STATUS = {
   UNAUTHORIZED: 401,
 } as const;
 
-export type HttpStatusCode = typeof HTTP_STATUS[keyof typeof HTTP_STATUS];
+export type HttpStatusCode = (typeof HTTP_STATUS)[keyof typeof HTTP_STATUS];
 ```
 
 ### Null Safety
+
 ```typescript
 // ✅ Good: Optional chaining
 const userName = user?.profile?.name;
@@ -116,6 +120,7 @@ const name = user!.name;
 ## Backend (Node.js/Express)
 
 ### Project Structure
+
 ```
 services/auth-service/
 ├── src/
@@ -138,6 +143,7 @@ services/auth-service/
 ```
 
 ### Layered Architecture
+
 ```typescript
 // ✅ Good: Separation of concerns
 
@@ -168,13 +174,14 @@ export class UserRepository {
 
   async create(email: string, passwordHash: string): Promise<User> {
     return this.db.user.create({
-      data: { email, passwordHash }
+      data: { email, passwordHash },
     });
   }
 }
 ```
 
 ### Error Handling
+
 ```typescript
 // ✅ Good: Custom error classes
 export class AppError extends Error {
@@ -235,6 +242,7 @@ export const asyncHandler = (fn: Function) => {
 ```
 
 ### API Response Format
+
 ```typescript
 // ✅ Good: Consistent response structure
 interface ApiResponse<T = unknown> {
@@ -276,6 +284,7 @@ res.json({
 ```
 
 ### Environment Variables
+
 ```typescript
 // ✅ Good: Validate env vars at startup
 import { z } from 'zod';
@@ -296,6 +305,7 @@ const port = env.PORT; // type: number
 ### Database (Prisma)
 
 #### Schema Conventions
+
 ```prisma
 // ✅ Good: Clear naming, proper types
 model User {
@@ -322,6 +332,7 @@ enum UserRole {
 ```
 
 #### Query Patterns
+
 ```typescript
 // ✅ Good: Select only needed fields
 const user = await prisma.user.findUnique({
@@ -356,6 +367,7 @@ const users = await prisma.user.findMany({
 ## Frontend (React)
 
 ### Component Structure
+
 ```typescript
 // ✅ Good: Functional component with TypeScript
 interface UserCardProps {
@@ -389,6 +401,7 @@ export default function UserCard(props) { }
 ```
 
 ### Custom Hooks
+
 ```typescript
 // ✅ Good: Extract logic to hooks
 export function useAuth() {
@@ -405,6 +418,7 @@ const { isAuthenticated, logout } = useAuth();
 ```
 
 ### State Management (Zustand)
+
 ```typescript
 // ✅ Good: Typed Zustand store
 interface AuthState {
@@ -434,6 +448,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 ```
 
 ### Styling (SCSS Modules)
+
 ```scss
 // ✅ Good: Component-scoped styles
 // UserCard.module.scss
@@ -463,6 +478,7 @@ import styles from './UserCard.module.scss';
 ```
 
 ### API Calls
+
 ```typescript
 // ✅ Good: Centralized API service
 import axios from 'axios';
@@ -496,17 +512,16 @@ export const authService = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
 
-  signup: (data: SignupData) =>
-    api.post('/auth/signup', data),
+  signup: (data: SignupData) => api.post('/auth/signup', data),
 
-  getMe: () =>
-    api.get('/auth/me'),
+  getMe: () => api.get('/auth/me'),
 };
 ```
 
 ## Git & Version Control
 
 ### Commit Messages
+
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
@@ -518,6 +533,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -528,6 +544,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `perf`: Performance improvements
 
 **Examples:**
+
 ```
 feat(auth): add password reset endpoint
 
@@ -555,6 +572,7 @@ Add section about environment variable configuration.
 ```
 
 ### Branch Naming
+
 ```
 feature/JIRA-123-add-google-oauth
 fix/JIRA-456-login-validation
@@ -565,6 +583,7 @@ docs/update-api-documentation
 ## Testing
 
 ### Unit Tests
+
 ```typescript
 // ✅ Good: Descriptive test names
 describe('AuthService', () => {
@@ -591,6 +610,7 @@ describe('AuthService', () => {
 ```
 
 ### Test Coverage
+
 - Aim for >80% coverage
 - Focus on business logic
 - Test edge cases and error paths
@@ -599,6 +619,7 @@ describe('AuthService', () => {
 ## Documentation
 
 ### Code Comments
+
 ```typescript
 // ✅ Good: Explain WHY, not WHAT
 // We use bcrypt with 10 rounds because it provides good security
@@ -623,6 +644,7 @@ function shouldRefreshToken(token: string): boolean {
 ```
 
 ### JSDoc
+
 ```typescript
 /**
  * Authenticates user and generates JWT tokens
@@ -646,6 +668,7 @@ export async function login(
 ## Performance
 
 ### Backend
+
 - Use database indexes
 - Implement caching (Redis)
 - Use connection pooling
@@ -654,6 +677,7 @@ export async function login(
 - Avoid N+1 queries
 
 ### Frontend
+
 - Code splitting
 - Lazy loading
 - Memoization (`useMemo`, `useCallback`)
@@ -664,6 +688,7 @@ export async function login(
 ## Security
 
 ### Never Commit
+
 - API keys, secrets
 - `.env` files
 - Private keys
@@ -671,6 +696,7 @@ export async function login(
 - Database credentials
 
 ### Always
+
 - Validate user input
 - Sanitize data
 - Use parameterized queries
@@ -678,4 +704,3 @@ export async function login(
 - Keep dependencies updated
 - Use HTTPS in production
 - Set secure HTTP headers
-

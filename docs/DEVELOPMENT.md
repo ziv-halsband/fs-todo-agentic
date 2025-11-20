@@ -3,6 +3,7 @@
 ## Prerequisites
 
 ### Required Software
+
 - **Node.js** >= 22.0.0 (v22.21.0 recommended) ([Download](https://nodejs.org/))
   - Use nvm: `nvm install 22.21.0 && nvm use 22.21.0`
   - Or check `.nvmrc` in project root
@@ -11,6 +12,7 @@
 - **Git** ([Download](https://git-scm.com/))
 
 ### Optional (for K8s development)
+
 - **Minikube** ([Install Guide](https://minikube.sigs.k8s.io/docs/start/))
 - **kubectl** ([Install Guide](https://kubernetes.io/docs/tasks/tools/))
 - **Postman** or **Insomnia** (API testing)
@@ -18,6 +20,7 @@
 ## Initial Setup
 
 ### 1. Clone Repository
+
 ```bash
 git clone <your-repo-url>
 cd fs-project
@@ -28,6 +31,7 @@ nvm use
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 # Install all workspace dependencies
 pnpm install
@@ -38,6 +42,7 @@ pnpm install
 Each service needs its own `.env` file:
 
 **Auth Service** (`services/auth-service/.env`):
+
 ```bash
 PORT=3001
 NODE_ENV=development
@@ -51,12 +56,14 @@ CORS_ORIGIN=http://localhost:3000
 ```
 
 **Frontend** (`frontend/.env`):
+
 ```bash
 VITE_API_URL=http://localhost:3001
 VITE_APP_NAME=Full-Stack Todo App
 ```
 
 ### 4. Start Infrastructure
+
 ```bash
 # Start PostgreSQL and Redis
 pnpm docker:up
@@ -65,6 +72,7 @@ pnpm docker:up
 ```
 
 ### 5. Run Database Migrations
+
 ```bash
 # Navigate to auth service
 cd services/auth-service
@@ -80,6 +88,7 @@ pnpm prisma db seed
 ```
 
 ### 6. Start Development Servers
+
 ```bash
 # Terminal 1: Auth service
 pnpm dev:auth
@@ -132,6 +141,7 @@ pnpm build
 ### Database Development
 
 #### Creating Migrations
+
 ```bash
 cd services/auth-service
 
@@ -143,6 +153,7 @@ pnpm prisma migrate dev --name add_user_role
 ```
 
 #### Viewing Database
+
 ```bash
 # Option 1: Prisma Studio (GUI)
 cd services/auth-service
@@ -156,6 +167,7 @@ docker exec -it fs-postgres psql -U postgres -d auth_db
 ```
 
 #### Resetting Database
+
 ```bash
 cd services/auth-service
 
@@ -171,6 +183,7 @@ pnpm prisma migrate dev
 ### Redis Development
 
 #### Viewing Redis Data
+
 ```bash
 # Connect to Redis CLI
 docker exec -it fs-redis redis-cli
@@ -184,12 +197,14 @@ TTL session:123          # Check time-to-live
 ```
 
 #### Redis GUI (Optional)
+
 - [RedisInsight](https://redis.com/redis-enterprise/redis-insight/) - Free Redis GUI
 - [Medis](https://getmedis.com/) - macOS Redis client
 
 ## Testing
 
 ### Unit Tests
+
 ```bash
 # Run all tests
 pnpm test
@@ -212,6 +227,7 @@ pnpm test:coverage
    - Import `docs/postman/environment.json`
 
 2. **Test Flow**
+
    ```
    1. POST /api/auth/signup (creates user)
    2. POST /api/auth/login (returns JWT)
@@ -226,6 +242,7 @@ pnpm test:coverage
 ### Manual Testing Checklist
 
 **Auth Service:**
+
 - [ ] Signup with valid email/password
 - [ ] Signup with duplicate email (should fail)
 - [ ] Login with correct credentials
@@ -236,6 +253,7 @@ pnpm test:coverage
 - [ ] Refresh token before expiration
 
 **Frontend:**
+
 - [ ] Signup form validation
 - [ ] Login form validation
 - [ ] Redirect to dashboard after login
@@ -249,6 +267,7 @@ pnpm test:coverage
 ### Backend Debugging (VSCode)
 
 Add to `.vscode/launch.json`:
+
 ```json
 {
   "version": "0.2.0",
@@ -296,6 +315,7 @@ docker inspect fs-postgres
 ### Common Issues
 
 #### Port Already in Use
+
 ```bash
 # Find process using port
 lsof -i :3001
@@ -305,6 +325,7 @@ kill -9 <PID>
 ```
 
 #### Database Connection Failed
+
 ```bash
 # Check Postgres is running
 docker ps | grep postgres
@@ -317,12 +338,14 @@ docker-compose restart postgres
 ```
 
 #### Prisma Client Not Generated
+
 ```bash
 cd services/auth-service
 pnpm prisma generate
 ```
 
 #### Redis Connection Issues
+
 ```bash
 # Test Redis connection
 docker exec -it fs-redis redis-cli PING
@@ -330,6 +353,7 @@ docker exec -it fs-redis redis-cli PING
 ```
 
 #### Module Not Found (after adding package)
+
 ```bash
 # Rebuild workspace
 pnpm install
@@ -341,6 +365,7 @@ pnpm store prune
 ## Code Quality
 
 ### Linting
+
 ```bash
 # Lint all code
 pnpm lint
@@ -353,6 +378,7 @@ pnpm --filter auth-service lint
 ```
 
 ### Type Checking
+
 ```bash
 # Check all TypeScript
 pnpm type-check
@@ -362,6 +388,7 @@ pnpm type-check:watch
 ```
 
 ### Formatting
+
 ```bash
 # Format with Prettier
 pnpm format
@@ -373,6 +400,7 @@ pnpm format:check
 ### Pre-commit Hooks
 
 Husky is configured to run checks before commits:
+
 - ESLint
 - Prettier
 - TypeScript type checking
@@ -381,6 +409,7 @@ Husky is configured to run checks before commits:
 ## Performance Profiling
 
 ### Backend Performance
+
 ```bash
 # Use Node.js built-in profiler
 node --inspect services/auth-service/dist/index.js
@@ -390,6 +419,7 @@ npx clinic doctor -- node services/auth-service/dist/index.js
 ```
 
 ### Frontend Performance
+
 - Use React DevTools Profiler
 - Chrome DevTools Performance tab
 - Lighthouse audits
@@ -397,6 +427,7 @@ npx clinic doctor -- node services/auth-service/dist/index.js
 ## Database Optimization
 
 ### Query Analysis
+
 ```sql
 -- Explain query plan
 EXPLAIN ANALYZE SELECT * FROM users WHERE email = 'test@example.com';
@@ -406,12 +437,13 @@ SELECT * FROM pg_stat_statements ORDER BY total_time DESC LIMIT 10;
 ```
 
 ### Indexes
+
 ```prisma
 // Add indexes in schema.prisma
 model User {
   id    String @id @default(uuid())
   email String @unique
-  
+
   @@index([email]) // Composite index example
 }
 ```
@@ -419,6 +451,7 @@ model User {
 ## Git Workflow
 
 ### Branch Naming
+
 ```
 feature/add-google-oauth
 fix/login-validation-bug
@@ -427,7 +460,9 @@ docs/update-readme
 ```
 
 ### Commit Messages
+
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
 ```
 feat(auth): add password reset endpoint
 fix(frontend): resolve login redirect issue
@@ -437,6 +472,7 @@ test(auth): add unit tests for signup
 ```
 
 ### Pull Request Process
+
 1. Create feature branch
 2. Make changes with atomic commits
 3. Run tests: `pnpm test && pnpm lint`
@@ -477,6 +513,7 @@ pnpm k8s:destroy        # Delete cluster
 ## Resources
 
 ### Documentation
+
 - [Prisma Docs](https://www.prisma.io/docs)
 - [Express.js Guide](https://expressjs.com/en/guide/routing.html)
 - [React Documentation](https://react.dev/)
@@ -484,6 +521,7 @@ pnpm k8s:destroy        # Delete cluster
 - [Zustand Guide](https://docs.pmnd.rs/zustand/getting-started/introduction)
 
 ### Tutorials
+
 - [Prisma with PostgreSQL](https://www.prisma.io/docs/getting-started/setup-prisma/start-from-scratch/relational-databases-typescript-postgresql)
 - [JWT Authentication](https://www.digitalocean.com/community/tutorials/nodejs-jwt-expressjs)
 - [Docker Compose](https://docs.docker.com/compose/gettingstarted/)
@@ -496,4 +534,3 @@ pnpm k8s:destroy        # Delete cluster
 - Search existing GitHub issues
 - Check Docker/Kubernetes logs
 - Use debugger breakpoints
-

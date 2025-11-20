@@ -15,6 +15,7 @@ A production-grade full-stack application built with microservices architecture,
 ## 🏗️ Architecture
 
 ### Monorepo Structure
+
 ```
 fs-project/
 ├── services/
@@ -34,6 +35,7 @@ fs-project/
 ### Tech Stack
 
 **Backend**
+
 - Node.js + Express + TypeScript
 - PostgreSQL (with Prisma ORM)
 - Redis (sessions & caching)
@@ -41,6 +43,7 @@ fs-project/
 - bcrypt password hashing
 
 **Frontend**
+
 - React 18 + TypeScript
 - Material-UI (MUI) + SCSS Modules
 - Zustand (state management)
@@ -48,6 +51,7 @@ fs-project/
 - Axios
 
 **DevOps**
+
 - Docker + Docker Compose
 - Kubernetes (Minikube local, AWS EKS production)
 - GitHub Actions
@@ -57,6 +61,7 @@ fs-project/
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js >= 22.0.0 (v22.21.0 recommended)
 - pnpm >= 10.0.0
 - Docker Desktop
@@ -81,6 +86,7 @@ pnpm dev:frontend
 ### Environment Setup
 
 Copy `.env.example` files in each service and configure:
+
 ```bash
 cp services/auth-service/.env.example services/auth-service/.env
 ```
@@ -95,6 +101,7 @@ cp services/auth-service/.env.example services/auth-service/.env
 ## 🎓 Learning Focus Areas
 
 ### Phase 1: Authentication (Current)
+
 - ✅ Email/password authentication
 - ✅ JWT token management
 - ✅ Session handling with Redis
@@ -104,6 +111,7 @@ cp services/auth-service/.env.example services/auth-service/.env
 - ✅ CI/CD with GitHub Actions
 
 ### Phase 2: Todo Management (Next)
+
 - Todo CRUD operations
 - Todo sharing & collaboration
 - RBAC (Owner, Editor, Guest roles)
@@ -113,6 +121,7 @@ cp services/auth-service/.env.example services/auth-service/.env
 - AWS EKS production deployment
 
 ### Phase 3: Advanced Features (Future)
+
 - Microfrontends architecture
 - AI integration (Langchain)
 - Real-time updates (WebSockets)
@@ -157,11 +166,13 @@ pnpm build:frontend    # Build frontend
 ## 🧪 Testing
 
 ### Local Testing with Postman
+
 1. Start services: `pnpm docker:up`
 2. Import Postman collection from `docs/postman/`
 3. Test endpoints at `http://localhost:3001/api/auth`
 
 ### Endpoints
+
 - `POST /api/auth/signup` - Register new user
 - `POST /api/auth/login` - Login
 - `GET /api/auth/me` - Get current user (requires JWT)
@@ -185,4 +196,3 @@ This is a personal learning project, but feel free to use it as a reference!
 ## 📄 License
 
 MIT
-
