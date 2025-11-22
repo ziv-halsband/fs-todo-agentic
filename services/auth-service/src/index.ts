@@ -13,7 +13,7 @@ function greet(name: string) {
   return name.toUpperCase();
 }
 
-// Missing await
+// Missing await``
 async function getUser(id: string): Promise<{ id: string; name: string }> {
   const user = await Promise.resolve({ id, name: 'John' });
   return user;

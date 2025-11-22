@@ -1,0 +1,60 @@
+// Prisma Schema for Auth Service
+// Learn more: https://pris.ly/d/prisma-schema
+
+// ============================================
+// GENERATOR - Creates TypeScript Prisma Client
+// ============================================
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============================================
+// DATASOURCE - Database Configuration
+// ============================================
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// MODELS - Database Tables
+// ============================================
+
+model User {
+  // Primary Key - UUID for better security & distribution
+  id String @id @default(uuid())
+
+  // Authentication fields
+  email        String @unique
+  passwordHash String @map("password_hash")
+
+  // Profile information
+  fullName  String  @map("full_name")
+  avatarUrl String? @map("avatar_url") // Optional - for S3 uploads later
+
+  // Authorization
+  role UserRole @default(USER)
+
+  // Email verification (simplified for now)
+  isVerified Boolean @default(true) @map("is_verified")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Table name in database (snake_case)
+  @@map("users")
+  // Database index for faster email lookups
+  @@index([email])
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  USER   // Regular user
+  EDITOR // Can edit shared todos
+  ADMIN  // Full access
+}
+

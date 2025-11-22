@@ -1,0 +1,50 @@
+# ============================================
+# Docker Compose - Local Development Environment
+# ============================================
+# Purpose: Run infrastructure services for local development
+# Services run locally, infrastructure runs in Docker
+#
+# Usage:
+#   Start:   docker-compose up -d
+#   Stop:    docker-compose down
+#   Logs:    docker-compose logs -f
+#   Status:  docker-compose ps
+#
+# Connect from local services:
+#   Postgres: localhost:5432
+
+version: "3.8"
+
+services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: fs-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ============================================
+# Volumes - Persistent Storage
+# ============================================
+volumes:
+  postgres_data:
+    driver: local
