@@ -25,8 +25,8 @@ model User {
   id String @id @default(uuid())
 
   // Authentication fields
-  email        String @unique
-  passwordHash String @map("password_hash")
+  email        String  @unique
+  passwordHash String? @map("password_hash") // Optional - OAuth users don't have password
 
   // Profile information
   fullName  String  @map("full_name")
@@ -38,6 +38,10 @@ model User {
   // Email verification (simplified for now)
   isVerified Boolean @default(true) @map("is_verified")
 
+  // OAuth fields - for Google/Facebook/etc login
+  provider   AuthProvider @default(EMAIL)
+  providerId String?      @map("provider_id") // Google user ID, Facebook ID, etc.
+
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -46,6 +50,8 @@ model User {
   @@map("users")
   // Database index for faster email lookups
   @@index([email])
+  // Unique constraint: same user from same provider only once
+  @@unique([provider, providerId], name: "provider_user")
 }
 
 // ============================================
@@ -56,5 +62,12 @@ enum UserRole {
   USER   // Regular user
   EDITOR // Can edit shared todos
   ADMIN  // Full access
+}
+
+enum AuthProvider {
+  EMAIL  // Traditional email + password
+  GOOGLE // Google OAuth
+  // FACEBOOK // Future
+  // GITHUB   // Future
 }
 
