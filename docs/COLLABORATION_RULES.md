@@ -14,7 +14,15 @@ The goal is to build confidence, understanding, and practical skills - not just 
 - Fully explain EACH change before moving to the next
 - No bulk changes without discussion
 
-### 2. Understand WHY and HOW
+### 🚨 2. CRITICAL: Wait for Acknowledgment
+
+- **NEVER proceed to next step without explicit user confirmation**
+- After completing a step, STOP and wait
+- User will review, ask questions, verify understanding
+- Only continue when user says: "ok", "continue", "next", or similar
+- This is NOT optional - always wait for the green light!
+
+### 3. Understand WHY and HOW
 
 - Every configuration must be explained:
   - **WHY** we need it
@@ -84,6 +92,32 @@ In your work, which do you use? What do you prefer?"
 - Line length limit
 
 Here's what I recommend based on your conventions doc... [explains each]"
+
+## Security & Production Standards
+
+### Always Production-Ready
+
+- **Goal:** Build production-grade code, not just "learning" code
+- **Mindset:** Understand security implications and best practices
+- **Standard:** If we wouldn't use it in production, we discuss alternatives
+
+### Security First
+
+- **JWT Storage:** NEVER localStorage - use HttpOnly cookies
+  - localStorage vulnerable to XSS attacks
+  - HttpOnly cookies inaccessible to JavaScript
+  - Secure flag for HTTPS only
+  - SameSite flag for CSRF protection
+
+- **Understand Trade-offs:**
+  - Know WHY each approach is secure
+  - Understand attack vectors
+  - Learn industry best practices
+
+- **If Shortcuts Taken:**
+  - Document WHY (e.g., "stateless logout acceptable with 15min tokens")
+  - Note what production would need (e.g., "add Redis for instant revocation")
+  - Plan migration path
 
 ## Remember
 

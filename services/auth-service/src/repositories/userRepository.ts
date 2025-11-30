@@ -1,4 +1,9 @@
-import { PrismaClient, type User, type UserRole } from '@prisma/client';
+import {
+  PrismaClient,
+  type User,
+  type UserRole,
+  type AuthProvider,
+} from '@prisma/client';
 
 import { ConflictError, NotFoundError } from '../utils/errors';
 
@@ -11,10 +16,12 @@ const prisma = new PrismaClient();
 
 export interface CreateUserData {
   email: string;
-  passwordHash: string;
+  passwordHash: string | null; // Null for OAuth users
   fullName: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   role?: UserRole;
+  provider?: AuthProvider;
+  providerId?: string | null;
 }
 
 export interface UpdateUserData {
@@ -72,6 +79,8 @@ export class UserRepository {
         avatarUrl: true,
         role: true,
         isVerified: true,
+        provider: true,
+        providerId: true,
         createdAt: true,
         updatedAt: true,
         // passwordHash: false (explicitly exclude)
@@ -103,6 +112,8 @@ export class UserRepository {
           fullName: data.fullName,
           avatarUrl: data.avatarUrl,
           role: data.role || 'USER',
+          provider: data.provider || 'EMAIL',
+          providerId: data.providerId || null,
         },
         select: {
           id: true,
@@ -111,6 +122,8 @@ export class UserRepository {
           avatarUrl: true,
           role: true,
           isVerified: true,
+          provider: true,
+          providerId: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -154,6 +167,8 @@ export class UserRepository {
           avatarUrl: true,
           role: true,
           isVerified: true,
+          provider: true,
+          providerId: true,
           createdAt: true,
           updatedAt: true,
         },

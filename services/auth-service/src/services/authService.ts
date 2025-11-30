@@ -9,6 +9,7 @@ import {
   type JWTPayload,
   UnauthorizedError,
   ValidationError,
+  ConflictError,
 } from '../utils';
 
 /**
@@ -118,6 +119,12 @@ export class AuthService {
     }
 
     // 3. Compare passwords
+    if (!user.passwordHash) {
+      throw new UnauthorizedError(
+        'This account uses OAuth login. Please login with Google.'
+      );
+    }
+
     const isPasswordValid = await comparePassword(password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedError('Invalid email or password');
@@ -231,6 +238,88 @@ export class AuthService {
     return Promise.resolve({
       message: 'Logged out successfully',
     });
+  }
+
+  /**
+   * Find or Create OAuth User
+   *
+   * Used for Google/Facebook/GitHub login.
+   * If user exists (by email), return them.
+   * If not, create new OAuth user.
+   *
+   * Security Note:
+   * - We trust the OAuth provider (Google) verified the email
+   * - OAuth users don't have passwords (passwordHash = null)
+   * - We use provider + providerId to prevent duplicates
+   *
+   * @param data - OAuth user data from provider
+   * @returns User data with tokens
+   */
+  async findOrCreateOAuthUser(data: {
+    email: string;
+    fullName: string;
+    avatarUrl?: string;
+    provider: 'GOOGLE'; // Future: | 'FACEBOOK' | 'GITHUB'
+    providerId: string;
+  }): Promise<{ user: SafeUser; accessToken: string; refreshToken: string }> {
+    const { email, fullName, avatarUrl, provider, providerId } = data;
+
+    // Check if user already exists with this email
+    const existingUser = await userRepository.findByEmail(email);
+
+    let finalUser: SafeUser;
+
+    if (existingUser) {
+      // User exists - check if it's the same provider
+      if (existingUser.provider !== provider) {
+        // User registered with different method (e.g., email/password)
+        throw new ConflictError(
+          `Account with this email already exists. Please login with ${existingUser.provider.toLowerCase()}.`
+        );
+      }
+
+      // User exists with same provider - just login
+      // Update avatar if changed
+      if (avatarUrl && existingUser.avatarUrl !== avatarUrl) {
+        const updatedUser = await userRepository.update(existingUser.id, {
+          avatarUrl,
+        });
+        if (!updatedUser) {
+          throw new Error('Failed to update user');
+        }
+        finalUser = updatedUser;
+      } else {
+        // Remove passwordHash to get SafeUser
+        const { passwordHash: _ph, ...safeUser } = existingUser;
+        finalUser = safeUser;
+      }
+    } else {
+      // Create new OAuth user
+      finalUser = await userRepository.create({
+        email,
+        passwordHash: null, // OAuth users don't have passwords!
+        fullName,
+        avatarUrl: avatarUrl || null,
+        provider,
+        providerId,
+      });
+    }
+
+    // Generate JWT tokens
+    const tokenPayload: JWTPayload = {
+      userId: finalUser.id,
+      email: finalUser.email,
+      role: finalUser.role,
+    };
+
+    const accessToken = generateAccessToken(tokenPayload);
+    const refreshToken = generateRefreshToken(tokenPayload);
+
+    return {
+      user: finalUser,
+      accessToken,
+      refreshToken,
+    };
   }
 }
 
