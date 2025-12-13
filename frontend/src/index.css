@@ -1,0 +1,24 @@
+/* ===========================================
+   CSS RESET & GLOBAL STYLES
+   =========================================== */
+
+/* 1. Remove default margins/paddings browsers add */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;  /* Width includes padding+border, not just content */
+}
+
+/* 2. Set base font and make body fill the viewport */
+body {
+  font-family: system-ui, -apple-system, sans-serif;  /* Use system font */
+  line-height: 1.5;                /* Readable line spacing */
+  min-height: 100vh;               /* Body takes at least full viewport height */
+  background-color: #1a1a2e;       /* Dark blue background */
+  color: #eaeaea;                  /* Light gray text */
+}
+
+/* 3. Make #root (where React mounts) fill the body */
+#root {
+  min-height: 100vh;
+}

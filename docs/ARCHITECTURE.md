@@ -1,5 +1,18 @@
 # Architecture Overview
 
+## 📋 Current Implementation Status
+
+| Component        | Status      | Details                             |
+| ---------------- | ----------- | ----------------------------------- |
+| **Auth Service** | ✅ Complete | Email/password + Google OAuth       |
+| **Database**     | ✅ Complete | Postgres with Prisma, OAuth support |
+| **Docker Infra** | ✅ Complete | Postgres on Docker Compose          |
+| **Frontend**     | ⏭️ Next     | Vite + React + MUI + Zustand        |
+| **Todo Service** | ⏭️ Planned  | After frontend auth                 |
+| **Deployment**   | ⏭️ Planned  | After frontend E2E test             |
+
+---
+
 ## System Design
 
 ### High-Level Architecture
@@ -36,68 +49,111 @@
 
 ## Services
 
-### Auth Service (Port 3001)
+### Auth Service (Port 3001) ✅ IMPLEMENTED
 
 **Responsibilities:**
 
-- User registration and authentication
-- Password hashing and validation
+- User registration (email/password)
+- User authentication (email/password + Google OAuth)
+- Password hashing with bcrypt
 - JWT token generation and validation
-- Session management with Redis
-- User profile management
+- HttpOnly cookie-based token storage (XSS protection)
 - Role-based access control (RBAC)
 
-**Database Schema:**
+**Current Status:**
 
-```sql
--- Users table
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  full_name VARCHAR(255) NOT NULL,
-  role VARCHAR(50) DEFAULT 'user',
-  is_verified BOOLEAN DEFAULT false,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
+- ✅ Email/password signup & login
+- ✅ Google OAuth login
+- ✅ JWT in HttpOnly cookies
+- ⏭️ Redis session tracking (future)
+- ⏭️ Password reset (future)
+- ⏭️ Email verification (future)
 
--- Sessions table (Redis for performance)
-Key: session:{userId}:{sessionId}
-Value: {
-  userId: string,
-  token: string,
-  expiresAt: number,
-  userAgent: string,
-  ipAddress: string
+**Database Schema (Prisma):**
+
+```prisma
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String?      @map("password_hash")  // Nullable for OAuth users
+  fullName     String       @map("full_name")
+  avatarUrl    String?      @map("avatar_url")
+  role         UserRole     @default(USER)
+  isVerified   Boolean      @default(true) @map("is_verified")
+  provider     AuthProvider @default(EMAIL)        // EMAIL, GOOGLE
+  providerId   String?      @map("provider_id")    // Google user ID
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@map("users")
+  @@unique([provider, providerId])
 }
-TTL: 7 days
+
+enum UserRole { USER, EDITOR, ADMIN }
+enum AuthProvider { EMAIL, GOOGLE }
 ```
 
 **API Endpoints:**
 
-| Method | Endpoint                    | Description        | Auth Required |
-| ------ | --------------------------- | ------------------ | ------------- |
-| POST   | `/api/auth/signup`          | Register new user  | No            |
-| POST   | `/api/auth/login`           | Authenticate user  | No            |
-| POST   | `/api/auth/logout`          | Invalidate session | Yes           |
-| GET    | `/api/auth/me`              | Get current user   | Yes           |
-| POST   | `/api/auth/refresh`         | Refresh JWT token  | Yes           |
-| PATCH  | `/api/auth/profile`         | Update profile     | Yes           |
-| POST   | `/api/auth/change-password` | Change password    | Yes           |
+| Method | Endpoint                | Description               | Auth Required |
+| ------ | ----------------------- | ------------------------- | ------------- |
+| GET    | `/health`               | Health check              | No            |
+| POST   | `/auth/signup`          | Register (email/password) | No            |
+| POST   | `/auth/login`           | Login (email/password)    | No            |
+| GET    | `/auth/me`              | Get current user          | Yes           |
+| POST   | `/auth/refresh`         | Refresh access token      | No (cookie)   |
+| POST   | `/auth/logout`          | Clear cookies             | Yes           |
+| GET    | `/auth/google`          | Start Google OAuth        | No            |
+| GET    | `/auth/google/callback` | Google OAuth callback     | No            |
+
+**Security Features:**
+
+```
+✅ HttpOnly cookies - JavaScript can't access tokens (XSS protection)
+✅ SameSite=strict - CSRF protection
+✅ Secure flag in production - HTTPS only
+✅ Short-lived access tokens - 15 minutes
+✅ Long-lived refresh tokens - 7 days
+✅ Password hashing - bcrypt with 10 rounds
+✅ Input validation - express-validator
+```
 
 **Environment Variables:**
 
 ```bash
+# Application
 PORT=3001
 NODE_ENV=development
-DATABASE_URL=postgresql://user:pass@localhost:5432/auth_db
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-secret-key
-JWT_EXPIRES_IN=15m
-REFRESH_TOKEN_EXPIRES_IN=7d
+
+# Database
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auth_db?schema=public
+
+# JWT
+JWT_ACCESS_SECRET=your-access-secret
+JWT_REFRESH_SECRET=your-refresh-secret
+JWT_ACCESS_EXPIRATION=15m
+JWT_REFRESH_EXPIRATION=7d
+
+# Password Hashing
 BCRYPT_ROUNDS=10
-CORS_ORIGIN=http://localhost:3000
+
+# Google OAuth
+GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=xxx
+GOOGLE_CALLBACK_URL=http://localhost:3001/auth/google/callback
+
+# Frontend
+FRONTEND_URL=http://localhost:3000
+```
+
+**Code Architecture (Layered):**
+
+```
+Request → Routes → Middleware → Controller → Service → Repository → Database
+                     ↑
+                (Validation)
+                     ↑
+                (Auth check)
 ```
 
 ### Todo Service (Port 3002) - Phase 2
@@ -139,75 +195,277 @@ CREATE TABLE todo_permissions (
 
 ## Frontend Application (Port 3000)
 
-**Architecture:**
+### Tech Stack
 
-- Component-based architecture
-- Container/Presentational pattern
-- Custom hooks for business logic
-- Zustand for global state
-- React Query for server state (future)
+| Category             | Choice             | Why                                                |
+| -------------------- | ------------------ | -------------------------------------------------- |
+| **Build Tool**       | Vite               | Instant dev server, fast builds, modern ES modules |
+| **UI Library**       | MUI v5             | Pre-built components, theming, TypeScript support  |
+| **Styling**          | SCSS + CSS Modules | Scoped styles, no naming conflicts, co-located     |
+| **State Management** | Zustand            | Minimal boilerplate, simple API, tiny bundle       |
+| **HTTP Client**      | Axios              | Automatic JSON, interceptors, industry standard    |
+| **Routing**          | React Router v6    | Industry standard, nested routes                   |
+| **TypeScript**       | Yes                | Type safety, better DX                             |
 
-**Directory Structure:**
+### Why These Choices?
+
+**Vite over Create-React-App:**
+
+```
+CRA:  Start dev server → Bundle ALL files → Serve (30-60s)
+Vite: Start dev server → Serve on-demand → Bundle when needed (1-2s)
+```
+
+**Zustand over Redux:**
+
+```typescript
+// Redux: 50+ lines of boilerplate
+// Zustand: 10 lines!
+const useAuthStore = create((set) => ({
+  user: null,
+  setUser: (user) => set({ user }),
+}));
+```
+
+**CSS Modules over regular SCSS:**
+
+```scss
+// LoginForm.module.scss
+.container {
+  padding: 20px;
+}
+
+// Compiles to: .LoginForm_container_x7h3k (unique, no conflicts!)
+```
+
+### Architecture Patterns
+
+- **Component-based**: Reusable, isolated UI components
+- **Feature-based folders**: Related files co-located together
+- **Custom hooks**: Encapsulate business logic
+- **Store pattern**: Global state with Zustand
+
+### Directory Structure
 
 ```
 frontend/
 ├── src/
-│   ├── components/        # Reusable UI components
-│   │   ├── auth/         # Auth-related components
-│   │   ├── common/       # Buttons, inputs, etc.
-│   │   └── layout/       # Layout components
-│   ├── pages/            # Page components
-│   │   ├── LoginPage/
-│   │   ├── SignupPage/
-│   │   └── DashboardPage/
-│   ├── store/            # Zustand stores
-│   │   └── authStore.ts
-│   ├── services/         # API services
-│   │   └── api.ts
-│   ├── hooks/            # Custom React hooks
-│   ├── utils/            # Helper functions
-│   ├── types/            # TypeScript types
-│   ├── styles/           # Global styles
-│   └── App.tsx
+│   ├── components/              # Reusable UI components
+│   │   ├── common/             # Shared components
+│   │   │   └── Button/
+│   │   │       ├── Button.tsx
+│   │   │       ├── Button.module.scss
+│   │   │       ├── Button.types.ts
+│   │   │       └── index.ts
+│   │   ├── auth/               # Auth-specific components
+│   │   │   └── LoginForm/
+│   │   │       ├── LoginForm.tsx
+│   │   │       ├── LoginForm.module.scss
+│   │   │       ├── parts/      # Private sub-components
+│   │   │       │   └── EmailInput.tsx
+│   │   │       └── index.ts
+│   │   └── layout/             # Layout components
+│   │       ├── Header/
+│   │       ├── Footer/
+│   │       └── Sidebar/
+│   │
+│   ├── pages/                   # Route pages (one per URL)
+│   │   ├── Login/
+│   │   │   ├── LoginPage.tsx
+│   │   │   ├── LoginPage.module.scss
+│   │   │   └── index.ts
+│   │   ├── Signup/
+│   │   └── Dashboard/
+│   │
+│   ├── hooks/                   # Custom React hooks
+│   │   ├── useAuth.ts          # Auth state & actions
+│   │   ├── useApi.ts           # API call wrapper
+│   │   └── useLocalStorage.ts  # LocalStorage wrapper
+│   │
+│   ├── store/                   # Zustand stores
+│   │   ├── authStore.ts        # Auth state (user, tokens)
+│   │   └── uiStore.ts          # UI state (modals, toasts)
+│   │
+│   ├── services/                # API layer
+│   │   ├── api.ts              # Base fetch/axios setup
+│   │   └── authService.ts      # Auth API calls
+│   │
+│   ├── types/                   # Shared TypeScript types
+│   │   ├── auth.types.ts
+│   │   └── api.types.ts
+│   │
+│   ├── utils/                   # Helper functions
+│   │   ├── formatters.ts
+│   │   └── validators.ts
+│   │
+│   ├── styles/                  # Global styles
+│   │   ├── _variables.scss     # Colors, spacing, fonts
+│   │   ├── _mixins.scss        # Reusable SCSS mixins
+│   │   ├── _reset.scss         # CSS reset
+│   │   └── global.scss         # Global styles
+│   │
+│   ├── App.tsx                  # Main app with routes
+│   ├── main.tsx                 # Entry point
+│   └── vite-env.d.ts           # Vite TypeScript types
+│
+├── public/                      # Static assets (favicon, etc.)
+├── index.html                   # HTML template
+├── vite.config.ts              # Vite configuration
+├── tsconfig.json               # TypeScript config
+└── package.json
+
+### Component File Structure
+
+Each component follows this pattern:
 ```
+
+ComponentName/
+├── ComponentName.tsx # Main component
+├── ComponentName.module.scss # Scoped styles (CSS Modules)
+├── ComponentName.types.ts # TypeScript interfaces (optional)
+├── index.ts # Clean export
+└── parts/ # Private sub-components (optional)
+└── SubComponent.tsx
+
+````
+
+### React Hooks We'll Use
+
+```typescript
+// Built-in Hooks
+useState()      // Local component state
+useEffect()     // Side effects (API calls, subscriptions)
+useRef()        // DOM refs, mutable values without re-render
+useCallback()   // Memoize functions (prevent recreating)
+useMemo()       // Memoize expensive calculations
+useContext()    // Access context values
+
+// Custom Hooks (we'll build)
+useAuth()       // Authentication state & actions
+useApi()        // API calls with loading/error states
+useForm()       // Form state management
+````
+
+### Build Modes
+
+**Development (`pnpm dev`):**
+
+- Vite dev server with HMR (Hot Module Replacement)
+- Source maps for easy debugging
+- No minification (readable code)
+- API proxy to backend (avoid CORS)
+- Fast rebuilds on file changes
+
+**Production (`pnpm build`):**
+
+- Minified JavaScript (smaller files)
+- Tree-shaking (remove unused code)
+- Code splitting (lazy load routes)
+- Optimized images
+- Static files in `dist/` folder
+- Served by Nginx/CDN
 
 ## Data Flow
 
-### Authentication Flow
+### Email/Password Authentication Flow
 
 ```
-1. User submits login form
+1. User submits login form (email, password)
    ↓
-2. Frontend sends POST /api/auth/login
+2. Frontend sends POST /auth/login
    ↓
 3. Auth service validates credentials
    ↓
-4. Auth service generates JWT token
+4. Auth service generates JWT tokens (access + refresh)
    ↓
-5. Auth service creates session in Redis
+5. Auth service sets HttpOnly cookies (NOT localStorage!)
+   - accessToken (15 min expiry)
+   - refreshToken (7 day expiry)
    ↓
-6. Auth service returns tokens + user data
+6. Auth service returns user data (NO tokens in response body!)
    ↓
-7. Frontend stores tokens in memory/localStorage
+7. Frontend updates Zustand auth store with user
    ↓
-8. Frontend updates Zustand auth store
+8. User redirected to dashboard
+```
+
+### Google OAuth Authentication Flow
+
+```
+1. User clicks "Login with Google"
    ↓
-9. User redirected to dashboard
+2. Frontend redirects to: /auth/google
+   ↓
+3. Passport redirects to Google login page
+   ↓
+4. User authenticates with Google
+   ↓
+5. Google redirects to: /auth/google/callback?code=...
+   ↓
+6. Passport exchanges code for user profile
+   ↓
+7. Auth service creates/finds user in database
+   ↓
+8. Auth service generates JWT tokens
+   ↓
+9. Auth service sets HttpOnly cookies
+   ↓
+10. Auth service redirects to frontend dashboard
+    ↓
+11. Frontend loads with cookies (automatic!)
 ```
 
 ### Protected API Request Flow
 
 ```
-1. Frontend makes API request with JWT in Authorization header
+1. Frontend makes API request
+   - Browser AUTOMATICALLY sends cookies (credentials: 'include')
    ↓
-2. Backend middleware validates JWT
+2. Backend middleware extracts JWT from cookie
    ↓
-3. Backend middleware checks session in Redis
+3. Backend middleware validates JWT
    ↓
-4. If valid: Process request
-   If invalid: Return 401 Unauthorized
+4. If valid: Process request, return data
+   If expired: Return 401 Unauthorized
    ↓
-5. If 401: Frontend refreshes token or redirects to login
+5. If 401: Frontend calls /auth/refresh (refresh token in cookie)
+   ↓
+6. If refresh succeeds: Retry original request
+   If refresh fails: Redirect to login
+```
+
+### Token Refresh Flow
+
+```
+1. Access token expires (after 15 min)
+   ↓
+2. API request returns 401 Unauthorized
+   ↓
+3. Frontend automatically calls POST /auth/refresh
+   - Refresh token sent via HttpOnly cookie
+   ↓
+4. Backend validates refresh token
+   ↓
+5. Backend generates new access token
+   ↓
+6. Backend sets new access token cookie
+   ↓
+7. Frontend retries original request
+```
+
+### Security: Why HttpOnly Cookies (NOT localStorage)
+
+```
+❌ localStorage:
+   - JavaScript CAN read it
+   - XSS attack can steal tokens
+   - Must manually send tokens
+
+✅ HttpOnly Cookies:
+   - JavaScript CANNOT read them (XSS protection!)
+   - Browser sends automatically (no manual code)
+   - SameSite=strict prevents CSRF
+   - Secure flag ensures HTTPS only
 ```
 
 ## Shared Packages

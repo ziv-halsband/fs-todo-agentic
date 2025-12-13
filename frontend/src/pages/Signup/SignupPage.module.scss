@@ -1,0 +1,57 @@
+
+.page {
+  /* Center the card on the page */
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;  /* Horizontal center */
+  align-items: center;      /* Vertical center */
+  padding: 1rem;            /* Small padding for mobile */
+}
+
+.card {
+  /* The white card containing the form */
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;         /* Don't get too wide */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.title {
+  color: #1a1a2e;
+  font-size: 1.75rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #666;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;   /* Stack fields vertically */
+  gap: 1.25rem;             /* Space between fields */
+}
+
+.footer {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+

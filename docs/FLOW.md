@@ -239,39 +239,39 @@
 
 ---
 
-## 🔄 Phase 6: Google OAuth (In Progress)
+## ✅ Phase 6: Google OAuth (COMPLETED)
 
-### Next Steps:
+### What Was Done:
 
-- [ ] Add Google OAuth provider
-- [ ] Update Prisma schema for OAuth fields
-- [ ] Implement OAuth flow
-- [ ] Test Google login
+- [x] Installed Passport.js + passport-google-oauth20
+- [x] Configured Google Cloud Console (OAuth credentials)
+- [x] Updated Prisma schema (provider, providerId fields)
+- [x] Created migration (add_oauth_support)
+- [x] Built Passport Google strategy (config/passport.ts)
+- [x] Added findOrCreateOAuthUser() to auth service
+- [x] Created OAuth controller (googleCallback, oauthError)
+- [x] Added OAuth routes (/auth/google, /auth/google/callback)
+- [x] Tested complete OAuth flow ✅
+
+### Key Files:
+
+```
+src/config/passport.ts       - Google OAuth strategy
+src/controllers/oauthController.ts  - OAuth handlers
+src/routes/oauthRoutes.ts    - OAuth endpoints
+src/services/authService.ts  - findOrCreateOAuthUser()
+```
+
+### Security:
+
+- OAuth users created without password (passwordHash = null)
+- Conflict detection (can't use same email with different providers)
+- HttpOnly cookies for JWT tokens
+- Automatic user creation from Google profile
 
 ---
 
-## 📋 Phase 7: Frontend (TODO)
-
-### 1. Setup
-
-- [ ] Create React app
-- [ ] Setup MUI + SCSS
-- [ ] Configure routing
-
-### 2. Auth Pages
-
-- [ ] Login page
-- [ ] Signup page
-- [ ] Protected routes
-
-### 3. Integration
-
-- [ ] Connect to auth-service API
-- [ ] Test E2E flow
-
----
-
-## 📋 Phase 7: Frontend (TODO)
+## 📋 Phase 7: Frontend (TODO - NEXT!)
 
 ### 1. Setup
 
@@ -354,5 +354,5 @@
 
 ---
 
-**Last Updated:** Phase 5 - Auth Service Complete & Tested
-**Next Step:** Google OAuth Integration
+**Last Updated:** Phase 6 - Google OAuth Complete ✅
+**Next Step:** Phase 7 - Frontend (Vite + React + MUI + Zustand)
