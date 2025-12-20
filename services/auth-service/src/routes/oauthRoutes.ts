@@ -35,6 +35,7 @@ router.get(
   passport.authenticate('google', {
     scope: ['profile', 'email'], // What we request from Google
     session: false, // We use JWT, not sessions
+    prompt: 'select_account', // Always show account picker
   })
 );
 

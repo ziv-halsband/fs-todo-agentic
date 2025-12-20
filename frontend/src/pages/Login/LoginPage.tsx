@@ -1,8 +1,13 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { TextField, Button } from '@mui/material';
+import { TextField, Button, Alert, Divider } from '@mui/material';
+
+import { login } from '../../services/authService';
+import { ApiError } from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 import styles from './LoginPage.module.scss';
 
 // Zod schema - only email and password for login
@@ -15,6 +20,14 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export const LoginPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [apiError, setApiError] = useState<string | null>(null);
+  const setUser = useAuthStore((state) => state.setUser);
+
+  // Get success message from signup redirect (if any)
+  const successMessage = (location.state as { message?: string })?.message;
+
   const {
     register,
     handleSubmit,
@@ -23,9 +36,21 @@ export const LoginPage = () => {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = (data: LoginFormData) => {
-    console.log('Login submitted:', data);
-    // Later: call API here
+  const onSubmit = async (data: LoginFormData) => {
+    try {
+      setApiError(null);
+
+      const response = await login(data);
+      setUser(response.user); // Store user in Zustand
+
+      navigate('/dashboard');
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setApiError(error.message);
+      } else {
+        setApiError('Something went wrong. Please try again.');
+      }
+    }
   };
 
   return (
@@ -33,6 +58,20 @@ export const LoginPage = () => {
       <div className={styles.card}>
         <h1 className={styles.title}>Welcome Back</h1>
         <p className={styles.subtitle}>Log in to your account</p>
+
+        {/* Show success message from signup */}
+        {successMessage && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {successMessage}
+          </Alert>
+        )}
+
+        {/* Show API error if any */}
+        {apiError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {apiError}
+          </Alert>
+        )}
 
         <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
           <TextField
@@ -65,6 +104,19 @@ export const LoginPage = () => {
             {isSubmitting ? 'Logging in...' : 'Log In'}
           </Button>
         </form>
+
+        <Divider sx={{ my: 2 }}>or</Divider>
+
+        <Button
+          variant="outlined"
+          size="large"
+          fullWidth
+          onClick={() => {
+            window.location.href = 'http://localhost:3001/auth/google';
+          }}
+        >
+          Continue with Google
+        </Button>
 
         <p className={styles.footer}>
           Don't have an account?{' '}

@@ -1,8 +1,12 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { TextField, Button } from '@mui/material';
+import { TextField, Button, Alert, Divider } from '@mui/material';
+
+import { signup } from '../../services/authService';
+import { ApiError } from '../../services/api';
 import styles from './SignupPage.module.scss';
 
 // Zod schema - defines validation rules
@@ -22,17 +26,35 @@ const signupSchema = z.object({
 type SignupFormData = z.infer<typeof signupSchema>;
 
 export const SignupPage = () => {
+  const navigate = useNavigate();
+  const [apiError, setApiError] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
-    resolver: zodResolver(signupSchema), // Connect Zod to RHF
+    resolver: zodResolver(signupSchema),
   });
 
-  const onSubmit = (data: SignupFormData) => {
-    console.log('Form submitted:', data);
-    // Later: call API here
+  const onSubmit = async (data: SignupFormData) => {
+    try {
+      setApiError(null); // Clear previous errors
+
+      await signup(data);
+
+      // Success! Redirect to login page
+      navigate('/login', {
+        state: { message: 'Account created! Please log in.' },
+      });
+    } catch (error) {
+      // Handle API errors
+      if (error instanceof ApiError) {
+        setApiError(error.message);
+      } else {
+        setApiError('Something went wrong. Please try again.');
+      }
+    }
   };
 
   return (
@@ -40,6 +62,13 @@ export const SignupPage = () => {
       <div className={styles.card}>
         <h1 className={styles.title}>Create Account</h1>
         <p className={styles.subtitle}>Sign up to get started</p>
+
+        {/* Show API error if any */}
+        {apiError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {apiError}
+          </Alert>
+        )}
 
         <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
           <TextField
@@ -81,6 +110,19 @@ export const SignupPage = () => {
             {isSubmitting ? 'Signing up...' : 'Sign Up'}
           </Button>
         </form>
+
+        <Divider sx={{ my: 2 }}>or</Divider>
+
+        <Button
+          variant="outlined"
+          size="large"
+          fullWidth
+          onClick={() => {
+            window.location.href = 'http://localhost:3001/auth/google';
+          }}
+        >
+          Continue with Google
+        </Button>
 
         <p className={styles.footer}>
           Already have an account?{' '}

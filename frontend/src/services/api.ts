@@ -23,7 +23,13 @@ export class ApiError extends Error {
 
 // Type for API error responses from backend
 interface ApiErrorResponse {
-  error?: string;
+  success?: boolean;
+  error?:
+    | {
+        message?: string;
+        code?: number;
+      }
+    | string;
   message?: string;
 }
 
@@ -36,6 +42,28 @@ export const api = axios.create({
   },
 });
 
+// Helper to extract error message from various response formats
+function extractErrorMessage(data: ApiErrorResponse | undefined): string {
+  if (!data) return 'Something went wrong';
+
+  // If error is an object with message property
+  if (data.error && typeof data.error === 'object' && data.error.message) {
+    return data.error.message;
+  }
+
+  // If error is a string directly
+  if (typeof data.error === 'string') {
+    return data.error;
+  }
+
+  // Fallback to top-level message
+  if (data.message) {
+    return data.message;
+  }
+
+  return 'Something went wrong';
+}
+
 // Response interceptor - handle errors globally
 api.interceptors.response.use(
   // Success - just return the response
@@ -44,10 +72,7 @@ api.interceptors.response.use(
   // Error - transform to ApiError
   (error: AxiosError<ApiErrorResponse>) => {
     const status = error.response?.status ?? 500;
-    const message =
-      error.response?.data?.error ??
-      error.response?.data?.message ??
-      'Something went wrong';
+    const message = extractErrorMessage(error.response?.data);
     const data = error.response?.data;
 
     throw new ApiError(status, message, data);
