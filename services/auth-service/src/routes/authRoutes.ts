@@ -11,10 +11,11 @@
  * Request → Validation → Auth (if needed) → Controller → Response
  */
 
+import { authenticate } from '@fs-project/backend-common';
 import { Router, type Router as RouterType } from 'express';
 
 import { authController } from '../controllers';
-import { validateSignup, validateLogin, authenticate } from '../middleware';
+import { validateSignup, validateLogin } from '../middleware';
 
 const router: RouterType = Router();
 

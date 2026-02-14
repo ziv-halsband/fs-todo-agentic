@@ -12,6 +12,7 @@
  * 5. We create/find user in our database
  */
 
+import { AuthProvider } from '@fs-project/common';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 
@@ -53,7 +54,7 @@ passport.use(
           email,
           fullName,
           avatarUrl,
-          provider: 'GOOGLE',
+          provider: AuthProvider.GOOGLE,
           providerId: googleId,
         });
 

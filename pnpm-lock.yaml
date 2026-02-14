@@ -145,6 +145,12 @@ importers:
 
   services/auth-service:
     dependencies:
+      '@fs-project/backend-common':
+        specifier: workspace:*
+        version: link:../../packages/backend-common
+      '@fs-project/common':
+        specifier: workspace:*
+        version: link:../../packages/common
       '@prisma/client':
         specifier: ^5.7.1
         version: 5.22.0(prisma@5.22.0)

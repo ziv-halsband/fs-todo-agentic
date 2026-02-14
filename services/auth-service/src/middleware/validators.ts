@@ -1,6 +1,6 @@
+import { ValidationError } from '@fs-project/backend-common';
 import { body, validationResult } from 'express-validator';
 
-import { ValidationError } from '../utils/errors';
 
 import type { Request, Response, NextFunction } from 'express';
 

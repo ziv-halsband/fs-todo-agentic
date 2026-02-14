@@ -1,11 +1,8 @@
-import {
-  PrismaClient,
-  type User,
-  type UserRole,
-  type AuthProvider,
-} from '@prisma/client';
 
-import { ConflictError, NotFoundError } from '../utils/errors';
+import { ConflictError, NotFoundError } from '@fs-project/backend-common';
+import { PrismaClient, type User } from '@prisma/client';
+
+import type { UserRole, AuthProvider } from '@fs-project/common';
 
 const prisma = new PrismaClient();
 

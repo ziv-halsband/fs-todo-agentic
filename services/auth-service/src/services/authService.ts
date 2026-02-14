@@ -1,8 +1,4 @@
-import { userRepository, type SafeUser } from '../repositories';
 import {
-  hashPassword,
-  comparePassword,
-  validatePasswordStrength,
   generateAccessToken,
   generateRefreshToken,
   verifyToken,
@@ -10,7 +6,17 @@ import {
   UnauthorizedError,
   ValidationError,
   ConflictError,
+} from '@fs-project/backend-common';
+
+
+import { userRepository, type SafeUser } from '../repositories';
+import {
+  hashPassword,
+  comparePassword,
+  validatePasswordStrength,
 } from '../utils';
+
+import type { AuthProvider } from '@fs-project/common';
 
 /**
  * Auth Service Response Types
@@ -259,7 +265,7 @@ export class AuthService {
     email: string;
     fullName: string;
     avatarUrl?: string;
-    provider: 'GOOGLE'; // Future: | 'FACEBOOK' | 'GITHUB'
+    provider: AuthProvider; // Using the enum
     providerId: string;
   }): Promise<{ user: SafeUser; accessToken: string; refreshToken: string }> {
     const { email, fullName, avatarUrl, provider, providerId } = data;

@@ -12,7 +12,7 @@
 
 import { authService } from '../services';
 
-import type { AuthRequest } from '../middleware/auth';
+import type { AuthRequest } from '@fs-project/backend-common';
 import type { Request, Response, NextFunction } from 'express';
 
 /**

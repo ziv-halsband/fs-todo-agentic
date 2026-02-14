@@ -5,7 +5,7 @@
  * Must be last middleware in Express app
  */
 
-import { AppError } from '../utils/errors';
+import { AppError } from '@fs-project/backend-common';
 
 import type { Request, Response, NextFunction } from 'express';
 
