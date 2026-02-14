@@ -14,3 +14,4 @@ ALTER COLUMN "password_hash" DROP NOT NULL;
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_provider_provider_id_key" ON "users"("provider", "provider_id");
+7

@@ -1,0 +1,39 @@
+---
+description: 
+alwaysApply: true
+---
+
+Project Rules
+
+Before any code change: write a short plan (3–6 steps) and wait.
+
+🚨 CRITICAL: Before creating/deleting packages, services, or major structural changes:
+- Write the plan
+- Wait for explicit user approval
+- Do NOT proceed without confirmation
+
+Read relevant repo files first (don't guess). If info is missing, ask one focused question or state one assumption and continue.
+
+Work in small steps: implement one step, stop, summarize, then continue.
+
+Keep diffs minimal and reversible; avoid "big rewrites".
+
+Preserve existing APIs/contracts unless explicitly asked; if you must change them, call it out clearly and update consumers.
+
+Follow repo conventions (TypeScript settings, folder structure, lint/format, naming).
+
+Backend: for logic changes, include input validation + consistent error shape + at least one meaningful test.
+
+Frontend: include loading/error/empty states + basic accessibility (labels, button types).
+
+Avoid new dependencies unless clearly justified; propose the simplest option first.
+
+Output format every time:
+
+What you're going to do (plan or step)
+
+Files to change
+
+The change (diff/snippets)
+
+How to test
