@@ -4,11 +4,18 @@ import dotenv from 'dotenv';
 import express, { type Request, type Response } from 'express';
 import passport from 'passport';
 
+// Debug: Check if PORT is already set before loading .env
+console.log('🔧 PORT before dotenv:', process.env.PORT);
+
+// Load .env file and OVERRIDE any existing environment variables
+const result = dotenv.config({ override: true });
+console.log('🔧 Loading .env from:', process.cwd());
+console.log('🔧 .env loaded:', result.error ? '❌ FAILED' : '✅ SUCCESS');
+console.log('🔧 PORT after dotenv:', process.env.PORT);
+
 import './config/passport'; // Initialize Passport strategies
 import { errorHandler } from './middleware';
 import { authRoutes, oauthRoutes } from './routes';
-
-dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;

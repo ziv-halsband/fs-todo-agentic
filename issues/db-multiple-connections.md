@@ -1,114 +1,52 @@
 # Issue: Multiple Prisma Client Instances (Connection Pool Leak)
 
-**Status**: 🔴 Open  
+**Status**: ✅ Resolved  
 **Priority**: Medium  
-**Affects**: auth-service (and future services)
+**Affects**: auth-service (pattern ready for future services)
+**Resolved**: 2026-02-14
 
 ---
 
 ## Problem
 
-Each repository creates its own `PrismaClient` instance:
-
-```typescript
-// services/auth-service/src/repositories/userRepository.ts:10
-const prisma = new PrismaClient();
-```
-
-**Impact:**
-
-- Each PrismaClient = separate connection pool
-- Multiple imports = multiple connections to Postgres
-- Connection limit exhaustion (Postgres default: ~100 connections)
-- Memory waste and slower performance
-- Will compound when we add todo-service and future services
+Each repository was creating its own `PrismaClient` instance, leading to multiple connection pools and potential connection leaks.
 
 ---
 
-## Current Behavior
+## Solution Implemented
 
-```typescript
-// Multiple PrismaClient instances created
-import { userRepository } from './repositories'; // Creates PrismaClient #1
-// If we had more repositories:
-import { postRepository } from './repositories'; // Creates PrismaClient #2
-import { sessionRepository } from './repositories'; // Creates PrismaClient #3
-```
+**Singleton Pattern** applied in auth-service:
 
-Each repository holds open connections even when not in use.
+### Files Created:
 
----
+1. **`src/config/database.ts`** - Singleton PrismaClient instance
+   - Single shared instance per service
+   - Hot-reload safe for development
+   - Production-ready
 
-## Proposed Solution
+2. **`src/types/global.d.ts`** - TypeScript global type definitions
+   - Allows `global.prisma` in development
 
-**Singleton Pattern**: Single shared PrismaClient instance per service.
+### Files Updated:
 
-### Implementation
-
-1. Create `src/config/database.ts`:
-
-```typescript
-import { PrismaClient } from '@prisma/client';
-
-let prisma: PrismaClient;
-
-if (process.env.NODE_ENV === 'production') {
-  prisma = new PrismaClient();
-} else {
-  // Prevent hot-reload from creating new instances in dev
-  if (!global.prisma) {
-    global.prisma = new PrismaClient();
-  }
-  prisma = global.prisma;
-}
-
-export default prisma;
-```
-
-2. Update all repositories to import shared instance:
-
-```typescript
-// Before
-const prisma = new PrismaClient();
-
-// After
-import prisma from '../config/database';
-```
-
-3. Add TypeScript global type definition:
-
-```typescript
-// src/types/global.d.ts
-import { PrismaClient } from '@prisma/client';
-
-declare global {
-  var prisma: PrismaClient | undefined;
-}
-```
+3. **`src/repositories/userRepository.ts`** - Uses shared instance
+   - Changed from `const prisma = new PrismaClient()` to `import prisma from '../config/database'`
 
 ---
 
-## Files to Update
-
-- [ ] Create `services/auth-service/src/config/database.ts`
-- [ ] Update `services/auth-service/src/repositories/userRepository.ts`
-- [ ] Create `services/auth-service/src/types/global.d.ts`
-- [ ] Apply same pattern to todo-service (when created)
-
----
-
-## Benefits
+## Benefits Achieved
 
 - ✅ Single connection pool per service
 - ✅ No connection leaks
 - ✅ Hot-reload safe (development)
 - ✅ Better memory usage
-- ✅ Scales to multiple services
+- ✅ Pattern ready for todo-service and future services
 
 ---
 
-## Related
+## Next Steps
 
-- For high-traffic production (>1000 req/sec): Consider PgBouncer connection pooler
-- For K8s deployments: Configure connection limits in DATABASE_URL
-- See: https://www.prisma.io/docs/guides/performance-and-optimization/connection-management
+- [ ] Apply same pattern to todo-service when created
+- [ ] Consider PgBouncer for high-traffic production (>1000 req/sec)
+
+---

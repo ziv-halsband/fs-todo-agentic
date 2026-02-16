@@ -13,10 +13,14 @@
  */
 
 import { AuthProvider } from '@fs-project/common';
+import dotenv from 'dotenv';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 
 import { authService } from '../services';
+
+// Load environment variables FIRST
+dotenv.config({ override: true });
 
 /**
  * Configure Google OAuth Strategy
@@ -29,43 +33,50 @@ import { authService } from '../services';
  * 5. We find or create user
  * 6. Return user to Passport
  */
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL as string,
-      scope: ['profile', 'email'], // What we want from Google
-    },
-    async (_accessToken, _refreshToken, profile, done) => {
-      try {
-        // Extract user info from Google profile
-        const email = profile.emails?.[0]?.value;
-        const fullName = profile.displayName;
-        const avatarUrl = profile.photos?.[0]?.value;
-        const googleId = profile.id;
+// Only register Google OAuth if credentials are configured
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL as string,
+        scope: ['profile', 'email'], // What we want from Google
+      },
+      async (_accessToken, _refreshToken, profile, done) => {
+        try {
+          // Extract user info from Google profile
+          const email = profile.emails?.[0]?.value;
+          const fullName = profile.displayName;
+          const avatarUrl = profile.photos?.[0]?.value;
+          const googleId = profile.id;
 
-        if (!email) {
-          return done(new Error('No email from Google'), undefined);
+          if (!email) {
+            return done(new Error('No email from Google'), undefined);
+          }
+
+          // Find or create user in our database
+          const user = await authService.findOrCreateOAuthUser({
+            email,
+            fullName,
+            avatarUrl,
+            provider: AuthProvider.GOOGLE,
+            providerId: googleId,
+          });
+
+          // Success! Return user to Passport
+          return done(null, user);
+        } catch (error) {
+          return done(error as Error, undefined);
         }
-
-        // Find or create user in our database
-        const user = await authService.findOrCreateOAuthUser({
-          email,
-          fullName,
-          avatarUrl,
-          provider: AuthProvider.GOOGLE,
-          providerId: googleId,
-        });
-
-        // Success! Return user to Passport
-        return done(null, user);
-      } catch (error) {
-        return done(error as Error, undefined);
       }
-    }
-  )
-);
+    )
+  );
+} else {
+  console.log(
+    '⚠️  Google OAuth not configured (GOOGLE_CLIENT_ID missing) - skipping'
+  );
+}
 
 /**
  * Serialize User

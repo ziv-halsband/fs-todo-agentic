@@ -13,6 +13,9 @@ coverage/
 dist/
 build/
 out/
+
+# Prisma generated clients (generated per-service, not committed)
+**/src/generated/
 *.tsbuildinfo
 
 # Environment variables

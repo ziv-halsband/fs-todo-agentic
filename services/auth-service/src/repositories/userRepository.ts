@@ -1,10 +1,9 @@
-
 import { ConflictError, NotFoundError } from '@fs-project/backend-common';
-import { PrismaClient, type User } from '@prisma/client';
 
+import prisma from '../config/database';
+
+import type { User } from '../generated/prisma';
 import type { UserRole, AuthProvider } from '@fs-project/common';
-
-const prisma = new PrismaClient();
 
 /**
  * Data Transfer Objects (DTOs)

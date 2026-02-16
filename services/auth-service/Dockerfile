@@ -1,119 +1,76 @@
 # ============================================
-# Auth Service - Dockerfile (Monorepo Optimized)
+# Auth Service - Dockerfile (Monorepo)
 # ============================================
-# Optimized for:
-# - Fast rebuilds (aggressive caching)
-# - Minimal image size
-# - pnpm workspace support
-# - Scalable to 100+ services
+# 3-stage build: Dependencies → Builder → Production
 
 # ============================================
-# Stage 1: Base
+# Stage 1: Dependencies
 # ============================================
-FROM node:22-alpine AS base
+FROM node:22-alpine AS dependencies
 
-# Install pnpm globally
-RUN npm install -g pnpm@10
-
-# Set working directory
+RUN npm install -g pnpm@10 && apk add --no-cache openssl
 WORKDIR /app
 
-# ============================================
-# Stage 2: Dependencies (Workspace-Aware)
-# ============================================
-FROM base AS dependencies
-
-# Copy workspace configuration (rarely changes = good caching)
+# Copy workspace config + lockfile (good cache layer)
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-
-# Copy service package.json (changes when deps change)
+COPY packages/backend-common/package.json ./packages/backend-common/
+COPY packages/common/package.json ./packages/common/
 COPY services/auth-service/package.json ./services/auth-service/
 
-# OPTIMIZATION: pnpm fetch downloads to global cache first
-# This layer is cached even if package.json changes slightly
-RUN pnpm fetch --filter auth-service
-
-# Install dependencies from cache
-# --frozen-lockfile: Ensure lockfile isn't modified
-# --offline: Use fetched cache (faster)
-# --filter: Install only auth-service dependencies
-RUN pnpm install --filter auth-service --frozen-lockfile --offline
+RUN pnpm install --filter auth-service... --frozen-lockfile --ignore-scripts
 
 # ============================================
-# Stage 3: Build Context (Copy Source)
+# Stage 2: Builder
 # ============================================
-FROM dependencies AS build-context
+FROM dependencies AS builder
 
-# Copy Prisma schema (needed for generation)
-COPY services/auth-service/prisma ./services/auth-service/prisma
+# Copy shared packages source
+COPY packages/backend-common ./packages/backend-common
+COPY packages/common ./packages/common
 
-# Copy TypeScript config
-COPY services/auth-service/tsconfig.json ./services/auth-service/
-
-# Copy source code
-COPY services/auth-service/src ./services/auth-service/src
-
-# ============================================
-# Stage 4: Development
-# ============================================
-FROM build-context AS development
-
-# Set working directory to service
-WORKDIR /app/services/auth-service
-
-# Generate Prisma Client
-RUN pnpm prisma generate
-
-# Expose port
-EXPOSE 3001
-
-# Development: Hot reload with tsx
-CMD ["pnpm", "run", "dev"]
-
-# ============================================
-# Stage 5: Builder (Production Build)
-# ============================================
-FROM build-context AS builder
+# Copy service source + Prisma schema + TS config
+COPY services/auth-service ./services/auth-service
+COPY tsconfig.json ./
 
 WORKDIR /app/services/auth-service
 
-# Generate Prisma Client
-RUN pnpm prisma generate
+# Build shared packages first (they export from dist/)
+RUN cd /app/packages/common && pnpm run build && \
+    cd /app/packages/backend-common && pnpm run build
 
-# Build TypeScript
-RUN pnpm run build
+# Generate Prisma → Build TS → Copy generated client into dist
+RUN pnpm prisma generate && \
+    pnpm run build && \
+    cp -r src/generated dist/generated
 
-# Prune dev dependencies (keep only production)
-RUN pnpm prune --prod
+# Create standalone production bundle (flat node_modules, no symlinks)
+RUN pnpm deploy --filter auth-service --prod --legacy /app/production
 
 # ============================================
-# Stage 6: Production (Minimal Runtime)
+# Stage 3: Production
 # ============================================
 FROM node:22-alpine AS production
 
-# Install pnpm (needed for running)
-RUN npm install -g pnpm@10
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy ONLY production artifacts
-COPY --from=builder /app/services/auth-service/dist ./dist
-COPY --from=builder /app/services/auth-service/node_modules ./node_modules
-COPY --from=builder /app/services/auth-service/package.json ./
-COPY --from=builder /app/services/auth-service/prisma ./prisma
+# Copy production node_modules from pnpm deploy (flat, no symlinks)
+COPY --from=builder /app/production/node_modules ./node_modules
+COPY --from=builder /app/production/package.json ./
 
-# Create non-root user for security
+# Copy compiled code + generated Prisma client
+COPY --from=builder /app/services/auth-service/dist ./dist
+
+# Non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 && \
     chown -R nodejs:nodejs /app
-
 USER nodejs
 
 EXPOSE 3001
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
   CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Production: Run compiled JS
 CMD ["node", "dist/index.js"]
