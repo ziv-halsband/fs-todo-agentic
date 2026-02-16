@@ -1,0 +1,50 @@
+# Dependencies (installed fresh in container)
+**/node_modules
+npm-debug.log
+pnpm-debug.log
+
+# Build outputs (built in container)
+**/dist
+**/build
+**/*.tsbuildinfo
+
+# Generated Prisma clients (generated in container)
+**/src/generated
+
+# Git
+.git
+.gitignore
+
+# Environment files (injected via docker-compose/k8s)
+**/.env
+**/.env.*
+
+# IDE
+.cursor
+.vscode
+.idea
+**/*.swp
+**/*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Tests and coverage
+**/coverage
+**/*.test.ts
+**/*.spec.ts
+
+# Documentation
+**/*.md
+docs/
+issues/
+
+# Docker files themselves
+docker-compose.yml
+
+# Frontend (not needed for backend service builds)
+frontend/
+
+# Scripts (not needed in images)
+scripts/

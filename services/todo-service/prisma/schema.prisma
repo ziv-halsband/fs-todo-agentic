@@ -1,0 +1,52 @@
+// Prisma Schema for Todo Service
+// Learn more: https://pris.ly/d/prisma-schema
+
+// ============================================
+// GENERATOR - Creates TypeScript Prisma Client
+// ============================================
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+// ============================================
+// DATASOURCE - Database Configuration
+// ============================================
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// MODELS - Database Tables
+// ============================================
+
+model Todo {
+  // Primary Key - UUID for better security & distribution
+  id String @id @default(uuid())
+
+  // Todo content
+  title       String
+  description String? // Optional detailed description
+
+  // Status
+  completed Boolean @default(false)
+
+  // Ownership - Links to User in auth-service
+  // Note: No foreign key constraint since User is in different DB
+  // We rely on application-level validation
+  userId String @map("user_id")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Table name in database (snake_case)
+  @@map("todos")
+  
+  // Database indexes for better query performance
+  @@index([userId]) // Fast lookup of user's todos
+  @@index([completed]) // Fast filtering by status
+  @@index([createdAt]) // Fast sorting by date
+}
