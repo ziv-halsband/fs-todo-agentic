@@ -15,54 +15,48 @@ import { oauthController } from '../controllers';
 
 const router: RouterType = Router();
 
-/**
- * GET /oauth/google
- *
- * Initiates Google OAuth flow
- *
- * What happens:
- * 1. User clicks "Login with Google" on frontend
- * 2. Frontend redirects to this endpoint
- * 3. Passport redirects user to Google's login page
- * 4. User logs in with Google
- * 5. Google redirects to /oauth/google/callback
- *
- * Passport handles all the OAuth complexity!
- */
-router.get(
-  '/google',
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-  passport.authenticate('google', {
-    scope: ['profile', 'email'], // What we request from Google
-    session: false, // We use JWT, not sessions
-    prompt: 'select_account', // Always show account picker
-  })
-);
+const isGoogleConfigured =
+  !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
 
-/**
- * GET /oauth/google/callback
- *
- * Google redirects here after user authenticates
- *
- * What happens:
- * 1. Google sends authorization code
- * 2. Passport exchanges code for user info
- * 3. Our Passport strategy creates/finds user in DB
- * 4. Controller sets JWT cookies
- * 5. Redirects to frontend dashboard
- *
- * Success: User is logged in with cookies set
- * Failure: Redirects to login with error
- */
-router.get(
-  '/google/callback',
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-  passport.authenticate('google', {
-    session: false,
-    failureRedirect: '/oauth/error',
-  }),
-  oauthController.googleCallback
-);
+if (isGoogleConfigured) {
+  /**
+   * GET /oauth/google
+   *
+   * Initiates Google OAuth flow
+   */
+  router.get(
+    '/google',
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    passport.authenticate('google', {
+      scope: ['profile', 'email'],
+      session: false,
+      prompt: 'select_account',
+    })
+  );
+
+  /**
+   * GET /oauth/google/callback
+   *
+   * Google redirects here after user authenticates
+   */
+  router.get(
+    '/google/callback',
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    passport.authenticate('google', {
+      session: false,
+      failureRedirect: '/oauth/error',
+    }),
+    oauthController.googleCallback
+  );
+} else {
+  // Return a clear error instead of crashing
+  router.get('/google', (_req, res) => {
+    res.status(501).json({
+      success: false,
+      error: { message: 'Google OAuth is not configured', code: 501 },
+    });
+  });
+}
 
 /**
  * GET /oauth/error

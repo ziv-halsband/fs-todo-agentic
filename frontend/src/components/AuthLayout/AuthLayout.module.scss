@@ -1,0 +1,139 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+// Left panel - illustration + testimonial (desktop only)
+.leftPanel {
+  display: none;
+  flex: 0 0 45%;
+  background: linear-gradient(135deg, #F8F7FF 0%, #EDE9FF 100%);
+  padding: 48px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+
+  @media (min-width: 900px) {
+    display: flex;
+  }
+}
+
+.illustration {
+  width: 100%;
+  max-width: 360px;
+  border-radius: 24px;
+  margin-bottom: 32px;
+  object-fit: cover;
+}
+
+.socialProof {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+  margin-right: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #A29BFE;
+  opacity: 0.4;
+
+  &.active {
+    opacity: 1;
+    background: #6C5CE7;
+  }
+}
+
+// Right panel - form content
+.rightPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  overflow-y: auto;
+
+  @media (min-width: 900px) {
+    padding: 32px 48px;
+  }
+}
+
+.formContainer {
+  width: 100%;
+  max-width: 420px;
+}
+
+// Mobile header (back arrow + title)
+.mobileHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 24px;
+
+  @media (min-width: 900px) {
+    display: none;
+  }
+}
+
+.backButton {
+  position: absolute;
+  left: 0;
+}
+
+
+// Desktop header (logo + back to home)
+.desktopHeader {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 24px;
+
+  @media (min-width: 900px) {
+    display: flex;
+  }
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logoIcon {
+  width: 28px;
+  height: 28px;
+  background: #6C5CE7;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.85rem;
+}
+
+// Mobile illustration (smaller, centered)
+.mobileIllustration {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto 24px;
+  border-radius: 16px;
+
+  @media (min-width: 900px) {
+    display: none;
+  }
+}

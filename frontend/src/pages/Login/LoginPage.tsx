@@ -1,22 +1,32 @@
 import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { TextField, Button, Alert, Divider } from '@mui/material';
+import { Alert, Box, Divider, Link, Paper, Typography } from '@mui/material';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 
+import { en } from '../../i18n';
 import { login } from '../../services/authService';
 import { ApiError } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
+import { FormInput } from '../../components/FormInput';
+import { GradientButton } from '../../components/GradientButton';
+import { OAuthButton } from '../../components/OAuthButton';
 import styles from './LoginPage.module.scss';
 
-// Zod schema - only email and password for login
+const t = en;
+
+// Validation schema
 const loginSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  email: z
+    .string()
+    .min(1, t.validation.emailRequired)
+    .email(t.validation.emailInvalid),
+  password: z.string().min(1, t.validation.passwordRequired),
 });
 
-// TypeScript type from schema
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export const LoginPage = () => {
@@ -25,7 +35,6 @@ export const LoginPage = () => {
   const [apiError, setApiError] = useState<string | null>(null);
   const setUser = useAuthStore((state) => state.setUser);
 
-  // Get success message from signup redirect (if any)
   const successMessage = (location.state as { message?: string })?.message;
 
   const {
@@ -39,92 +48,132 @@ export const LoginPage = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       setApiError(null);
-
       const response = await login(data);
-      setUser(response.user); // Store user in Zustand
-
+      setUser(response.user);
       navigate('/dashboard');
     } catch (error) {
       if (error instanceof ApiError) {
         setApiError(error.message);
       } else {
-        setApiError('Something went wrong. Please try again.');
+        setApiError(t.common.genericError);
       }
     }
   };
 
-  return (
-    <div className={styles.page}>
-      <div className={styles.card}>
-        <h1 className={styles.title}>Welcome Back</h1>
-        <p className={styles.subtitle}>Log in to your account</p>
+  const handleGoogleLogin = () => {
+    window.location.href = 'http://localhost:3001/auth/google';
+  };
 
-        {/* Show success message from signup */}
-        {successMessage && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {successMessage}
-          </Alert>
-        )}
+  // Render sections
+  const renderHeader = () => (
+    <>
+      <Box className={styles.iconWrapper}>
+        <LockOutlinedIcon sx={{ fontSize: 32, color: '#6C5CE7' }} />
+      </Box>
+      <Typography
+        variant="h5"
+        component="h1"
+        fontWeight={700}
+        mb={1}
+        align="center"
+      >
+        {t.login.heading}
+      </Typography>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        mb={3}
+        lineHeight={1.4}
+        align="center"
+      >
+        {t.login.subtitle}
+      </Typography>
+    </>
+  );
 
-        {/* Show API error if any */}
-        {apiError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {apiError}
-          </Alert>
-        )}
+  const renderAlerts = () => (
+    <>
+      {successMessage && (
+        <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+          {successMessage}
+        </Alert>
+      )}
+      {apiError && (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+          {apiError}
+        </Alert>
+      )}
+    </>
+  );
 
-        <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
-          <TextField
-            label="Email"
-            type="email"
-            variant="outlined"
-            fullWidth
-            error={!!errors.email}
-            helperText={errors.email?.message}
-            {...register('email')}
-          />
-
-          <TextField
-            label="Password"
-            type="password"
-            variant="outlined"
-            fullWidth
-            error={!!errors.password}
-            helperText={errors.password?.message}
-            {...register('password')}
-          />
-
-          <Button
-            type="submit"
-            variant="contained"
-            size="large"
-            fullWidth
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Logging in...' : 'Log In'}
-          </Button>
-        </form>
-
-        <Divider sx={{ my: 2 }}>or</Divider>
-
-        <Button
-          variant="outlined"
-          size="large"
-          fullWidth
-          onClick={() => {
-            window.location.href = 'http://localhost:3001/auth/google';
-          }}
-        >
-          Continue with Google
-        </Button>
-
-        <p className={styles.footer}>
-          Don't have an account?{' '}
-          <Link to="/signup" className={styles.link}>
-            Sign up
-          </Link>
-        </p>
+  const renderForm = () => (
+    <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+      <div className={styles.fieldGroup}>
+        <Typography variant="caption" fontWeight={600} mb={0.5}>
+          {t.login.email}
+        </Typography>
+        <FormInput
+          type="email"
+          placeholder={t.login.emailPlaceholder}
+          icon={<EmailOutlinedIcon color="action" />}
+          error={!!errors.email}
+          helperText={errors.email?.message}
+          {...register('email')}
+        />
       </div>
-    </div>
+
+      <div className={styles.fieldGroup}>
+        <Typography variant="caption" fontWeight={600} mb={0.5}>
+          {t.login.password}
+        </Typography>
+        <FormInput
+          type="password"
+          placeholder={t.login.passwordPlaceholder}
+          icon={<LockOutlinedIcon color="action" />}
+          error={!!errors.password}
+          helperText={errors.password?.message}
+          {...register('password')}
+        />
+      </div>
+
+      <GradientButton type="submit" loading={isSubmitting}>
+        {t.login.signIn}
+      </GradientButton>
+    </form>
+  );
+
+  const renderOAuthSection = () => (
+    <>
+      <Divider sx={{ my: 3 }}>{t.login.continueWith}</Divider>
+      <OAuthButton provider="google" onClick={handleGoogleLogin} fullWidth />
+    </>
+  );
+
+  const renderFooter = () => (
+    <Typography variant="body2" color="text.secondary" align="center" mt={3}>
+      {t.login.noAccount}{' '}
+      <Link
+        component={RouterLink}
+        to="/signup"
+        underline="hover"
+        color="primary"
+        fontWeight={600}
+      >
+        {t.login.createAccount}
+      </Link>
+    </Typography>
+  );
+
+  // Main render
+  return (
+    <Box className={styles.page}>
+      <Paper className={styles.card} elevation={3}>
+        {renderHeader()}
+        {renderAlerts()}
+        {renderForm()}
+        {renderOAuthSection()}
+        {renderFooter()}
+      </Paper>
+    </Box>
   );
 };

@@ -11,11 +11,11 @@
 
 /* 2. Set base font and make body fill the viewport */
 body {
-  font-family: system-ui, -apple-system, sans-serif;  /* Use system font */
-  line-height: 1.5;                /* Readable line spacing */
-  min-height: 100vh;               /* Body takes at least full viewport height */
-  background-color: #1a1a2e;       /* Dark blue background */
-  color: #eaeaea;                  /* Light gray text */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  min-height: 100vh;
+  background-color: #FFFFFF;
+  color: #2D3436;
 }
 
 /* 3. Make #root (where React mounts) fill the body */

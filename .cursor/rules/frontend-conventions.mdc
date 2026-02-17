@@ -1,0 +1,147 @@
+---
+description: Frontend conventions for React components, file structure, translations, and rendering patterns
+globs: frontend/**/*.{tsx,ts,scss}
+alwaysApply: false
+---
+
+# Frontend Conventions
+
+## Stack
+
+React 19 + TypeScript + Vite + MUI + Zustand + React Hook Form + Zod + SCSS Modules
+
+## File Structure
+
+```
+frontend/src/
+├── assets/          # Static files (images, icons, fonts)
+├── components/      # Reusable components (used across pages)
+│   └── MyComponent/
+│       ├── MyComponent.tsx
+│       ├── MyComponent.module.scss   # Only if MUI can't handle the styling
+│       └── index.ts                  # Re-export: export { MyComponent } from './MyComponent'
+├── pages/           # Route-level components (one folder per route)
+│   └── MyPage/
+│       ├── MyPage.tsx
+│       ├── MyPage.module.scss
+│       └── index.ts
+├── services/        # API calls (one file per backend service)
+├── store/           # Zustand stores (one file per domain)
+├── theme/           # MUI theme config
+├── i18n/            # Translation strings (all UI text lives here)
+│   ├── en.ts
+│   └── index.ts
+├── App.tsx          # Routes + auth guards
+├── main.tsx         # Entry point
+└── index.css        # Global CSS reset only
+```
+
+## Translations (i18n)
+
+All user-facing strings MUST live in `i18n/en.ts`, not hardcoded in JSX.
+
+```typescript
+// i18n/en.ts
+export const en = {
+  signup: {
+    heading: 'Start your family journey today',
+    subtitle: 'Join our community to manage schedules.',
+    createAccount: 'Create Account',
+  },
+};
+
+// In component:
+import { en } from '../../i18n';
+const t = en;
+<h1>{t.signup.heading}</h1>
+```
+
+## Component Render Pattern
+
+Split large JSX into named render functions. Never return one giant block.
+
+```typescript
+// BAD - one massive return
+return (
+  <Layout>
+    {/* 100+ lines of mixed JSX */}
+  </Layout>
+);
+
+// GOOD - split into logical sections
+const renderOAuthButtons = () => ( /* ... */ );
+const renderForm = () => ( /* ... */ );
+const renderFooter = () => ( /* ... */ );
+
+return (
+  <Layout>
+    {renderOAuthButtons()}
+    {renderForm()}
+    {renderFooter()}
+  </Layout>
+);
+```
+
+Each render function should be **one clear responsibility** (e.g., form, buttons, footer).
+
+## MUI Component Rules
+
+**Always use MUI components, not raw HTML elements:**
+
+### Layout Components
+- `<Box>` instead of `<div>` (for containers, wrappers, layout)
+- `<Paper>` or `<Card>` instead of `<div className={styles.card}>` (for elevated surfaces)
+- `<Container>` for max-width centering
+- `<Stack>` for flexbox layouts
+
+```typescript
+// BAD - raw divs with SCSS
+<div className={styles.page}>
+  <div className={styles.card}>
+    <h1>Title</h1>
+  </div>
+</div>
+
+// GOOD - MUI components
+<Box className={styles.page}>
+  <Paper className={styles.card}>
+    <Typography variant="h5">Title</Typography>
+  </Paper>
+</Box>
+```
+
+### Typography Components
+Use MUI `<Typography>` instead of raw HTML text elements (`h1`–`h6`, `p`, `span`).
+Use MUI `<Link>` or React Router `<Link>` instead of raw `<a>` tags.
+
+```typescript
+// BAD
+<h1 className={styles.heading}>Title</h1>
+<p className={styles.subtitle}>Subtitle</p>
+<a href="/">Link</a>
+
+// GOOD
+<Typography variant="h5" component="h1">Title</Typography>
+<Typography variant="body2" color="text.secondary">Subtitle</Typography>
+<Link href="/" underline="hover" color="primary">Link</Link>
+```
+
+- `variant` controls the visual style (font size, weight, line height) from theme
+- `component` controls the rendered HTML element (for SEO/accessibility)
+- `color` uses theme tokens (`text.primary`, `text.secondary`, `primary.main`)
+- Only use raw HTML for: `<form>`, `<label>` (form inputs), `<button type="submit">` when not using MUI Button
+
+## Styling Rules
+
+1. Use MUI components + theme tokens first
+2. SCSS Modules only for layout, gradients, responsive, or things MUI can't do
+3. No inline styles except MUI `sx` prop for small one-off tweaks
+4. Colors come from theme, not hardcoded (exception: SCSS gradients may use theme color values)
+
+## Component Rules
+
+- Functional components only
+- One component per file
+- Each folder has an `index.ts` re-export
+- Props interface defined above the component
+- Hooks at the top, handlers next, render functions last, return at the bottom

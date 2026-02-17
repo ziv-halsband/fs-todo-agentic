@@ -1,58 +1,42 @@
-/* LoginPage.module.scss
-   Same layout as SignupPage - centered card with form
-*/
-
 .page {
-  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 1rem;
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(135deg, #F8F7FF 0%, #EDE9FF 100%);
 }
 
 .card {
-  background-color: #ffffff;
-  border-radius: 12px;
-  padding: 2.5rem;
   width: 100%;
   max-width: 420px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-radius: 24px;
+  padding: 40px 32px;
+
+  @media (max-width: 600px) {
+    padding: 32px 24px;
+    border-radius: 16px;
+  }
 }
 
-.title {
-  color: #1a1a2e;
-  font-size: 1.75rem;
-  font-weight: 600;
-  text-align: center;
-  margin-bottom: 0.5rem;
-}
-
-.subtitle {
-  color: #666;
-  text-align: center;
-  margin-bottom: 2rem;
+.iconWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  background: linear-gradient(135deg, #F8F7FF 0%, #EDE9FF 100%);
+  border-radius: 12px;
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 20px;
 }
 
-.footer {
-  text-align: center;
-  margin-top: 1.5rem;
-  color: #666;
-  font-size: 0.875rem;
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
 }
-
-.link {
-  color: #3b82f6;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.link:hover {
-  text-decoration: underline;
-}
-
