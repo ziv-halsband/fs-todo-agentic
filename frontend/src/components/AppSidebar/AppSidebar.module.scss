@@ -1,0 +1,101 @@
+.drawer {
+  width: 240px;
+  flex-shrink: 0;
+
+  :global(.MuiDrawer-paper) {
+    width: 240px;
+    border-right: 1px solid #EEEEEE;
+    background: white;
+    position: relative;
+    box-sizing: border-box;
+  }
+}
+
+.sidebarContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px 8px;
+}
+
+.section {
+  margin-bottom: 8px;
+}
+
+.sectionLabel {
+  display: block;
+  padding: 4px 12px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9E9E9E;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.listsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 4px;
+}
+
+.navItem {
+  border-radius: 8px;
+  margin-bottom: 2px;
+  padding: 6px 12px;
+
+  &:global(.Mui-selected) {
+    background-color: #EEF2FF;
+    color: #6C5CE7;
+
+    :global(.MuiListItemIcon-root) {
+      color: #6C5CE7;
+    }
+
+    &:hover {
+      background-color: #E5E9FF;
+    }
+  }
+
+  &:global(.Mui-disabled) {
+    opacity: 0.5;
+  }
+}
+
+.listItem {
+  border-radius: 8px;
+  margin-bottom: 2px;
+  padding: 6px 12px;
+
+  &:global(.Mui-selected) {
+    background-color: #EEF2FF;
+    color: #6C5CE7;
+
+    :global(.MuiListItemIcon-root) {
+      color: #6C5CE7;
+    }
+
+    &:hover {
+      background-color: #E5E9FF;
+    }
+  }
+
+  &:hover {
+    background-color: #F5F5F5;
+  }
+}
+
+.badge {
+  :global(.MuiBadge-badge) {
+    position: static;
+    transform: none;
+    background: #F0F0F0;
+    color: #616161;
+    font-size: 11px;
+    font-weight: 600;
+    height: 20px;
+    min-width: 20px;
+    border-radius: 10px;
+    padding: 0 6px;
+  }
+}

@@ -1,0 +1,49 @@
+.page {
+  padding: 36px 40px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.greeting {
+  margin-bottom: 28px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.searchBar {
+  width: 320px;
+}
+
+.listSection {
+  // task rows live here
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.completedSection {
+  margin-top: 8px;
+}
+
+.completedHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 8px 4px;
+  color: #616161;
+  user-select: none;
+
+  &:hover {
+    color: #212121;
+  }
+}

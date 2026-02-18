@@ -1,20 +1,19 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-import { DashboardPage } from './pages/Dashboard';
+import { AppLayout } from './components/AppLayout';
 import { LoginPage } from './pages/Login';
 import { SignupPage } from './pages/Signup';
+import { TasksPage } from './pages/Tasks';
 import { useAuthStore } from './store/authStore';
 
 function App() {
   const { isLoading, isAuthenticated, checkAuth } = useAuthStore();
 
-  // On app load, check if user is already logged in
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
-  // Show loading while checking auth
   if (isLoading) {
     return (
       <div
@@ -32,39 +31,35 @@ function App() {
 
   return (
     <Routes>
-      {/* Redirect root based on auth status */}
       <Route
         path="/"
         element={
-          <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
+          <Navigate to={isAuthenticated ? '/tasks' : '/login'} replace />
         }
       />
 
-      {/* Public routes - redirect to dashboard if already logged in */}
       <Route
         path="/login"
         element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+          isAuthenticated ? <Navigate to="/tasks" replace /> : <LoginPage />
         }
       />
       <Route
         path="/signup"
         element={
-          isAuthenticated ? (
-            <Navigate to="/dashboard" replace />
-          ) : (
-            <SignupPage />
-          )
+          isAuthenticated ? <Navigate to="/tasks" replace /> : <SignupPage />
         }
       />
 
-      {/* Protected route - redirect to login if not authenticated */}
+      {/* Dashboard with AppLayout */}
       <Route
-        path="/dashboard"
+        path="/tasks"
         element={
-          isAuthenticated ? <DashboardPage /> : <Navigate to="/login" replace />
+          isAuthenticated ? <AppLayout /> : <Navigate to="/login" replace />
         }
-      />
+      >
+        <Route index element={<TasksPage />} />
+      </Route>
     </Routes>
   );
 }
