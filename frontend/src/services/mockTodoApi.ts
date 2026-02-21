@@ -3,6 +3,7 @@ export type Priority = 'high' | 'medium' | 'low';
 export interface Task {
   id: string;
   title: string;
+  description?: string;
   completed: boolean;
   starred: boolean;
   priority: Priority;
@@ -134,6 +135,44 @@ export const mockGetTasks = (params?: {
   }
 
   return filtered;
+};
+
+export const mockAddTask = (data: {
+  title: string;
+  description?: string;
+  priority: Priority;
+  listId: string;
+  dueDate?: string;
+}): Task => {
+  const list = MOCK_LISTS.find((l) => l.id === data.listId);
+  const newTask: Task = {
+    id: String(Date.now()),
+    title: data.title,
+    description: data.description,
+    completed: false,
+    starred: false,
+    priority: data.priority,
+    listId: data.listId,
+    listName: list?.name ?? data.listId,
+    dueDate: data.dueDate,
+  };
+  MOCK_TASKS.push(newTask);
+  return newTask;
+};
+
+export const mockUpdateTask = (
+  id: string,
+  data: Partial<Omit<Task, 'id'>>
+): Task | undefined => {
+  const task = MOCK_TASKS.find((t) => t.id === id);
+  if (task) {
+    Object.assign(task, data);
+    if (data.listId) {
+      const list = MOCK_LISTS.find((l) => l.id === data.listId);
+      task.listName = list?.name ?? data.listId;
+    }
+  }
+  return task;
 };
 
 export const mockToggleTaskComplete = (taskId: string): Task | undefined => {

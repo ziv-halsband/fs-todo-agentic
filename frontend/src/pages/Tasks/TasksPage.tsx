@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import {
   Box,
   Collapse,
+  Fab,
   FormControl,
   InputAdornment,
   MenuItem,
@@ -10,6 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
@@ -19,8 +21,10 @@ import {
   mockGetLists,
   mockGetTasks,
   mockToggleTaskComplete,
+  type Task,
 } from '../../services/mockTodoApi';
 import { TaskItem } from '../../components/TaskItem';
+import { TaskFormModal } from '../../components/TaskFormModal';
 import styles from './TasksPage.module.scss';
 
 type StatusFilter = 'all' | 'open' | 'completed';
@@ -41,6 +45,9 @@ export const TasksPage = () => {
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [completedExpanded, setCompletedExpanded] = useState(true);
   const [, setRevision] = useState(0);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
 
   const firstName = user?.fullName?.split(' ')[0] ?? 'there';
 
@@ -69,6 +76,27 @@ export const TasksPage = () => {
     mockToggleTaskComplete(id);
     setRevision((r) => r + 1);
   }, []);
+
+  const handleOpenAdd = () => {
+    setEditingTask(undefined);
+    setModalOpen(true);
+  };
+
+  const handleOpenEdit = useCallback((task: Task) => {
+    setEditingTask(task);
+    setModalOpen(true);
+  }, []);
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setEditingTask(undefined);
+  };
+
+  const handleSaved = () => {
+    setModalOpen(false);
+    setEditingTask(undefined);
+    setRevision((r) => r + 1);
+  };
 
   return (
     <Box className={styles.page}>
@@ -152,6 +180,7 @@ export const TasksPage = () => {
               key={task.id}
               task={task}
               onToggleComplete={handleToggleComplete}
+              onEdit={handleOpenEdit}
             />
           ))}
 
@@ -176,12 +205,30 @@ export const TasksPage = () => {
                   key={task.id}
                   task={task}
                   onToggleComplete={handleToggleComplete}
+                  onEdit={handleOpenEdit}
                 />
               ))}
             </Collapse>
           </Box>
         )}
       </Box>
+
+      <Fab
+        color="primary"
+        aria-label="add task"
+        onClick={handleOpenAdd}
+        sx={{ position: 'fixed', bottom: 32, right: 32 }}
+      >
+        <AddIcon />
+      </Fab>
+
+      <TaskFormModal
+        open={modalOpen}
+        task={editingTask}
+        defaultListId={selectedListId}
+        onClose={handleModalClose}
+        onSaved={handleSaved}
+      />
     </Box>
   );
 };

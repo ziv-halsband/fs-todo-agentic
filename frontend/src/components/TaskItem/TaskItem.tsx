@@ -30,25 +30,29 @@ const formatDueDate = (dateStr: string): string => {
 interface Props {
   task: Task;
   onToggleComplete: (id: string) => void;
+  onEdit: (task: Task) => void;
 }
 
-export const TaskItem = ({ task, onToggleComplete }: Props) => {
+export const TaskItem = ({ task, onToggleComplete, onEdit }: Props) => {
   const priority = PRIORITY_CONFIG[task.priority];
 
   return (
     <Box
       className={`${styles.row} ${task.completed ? styles.completedRow : ''}`}
+      onClick={() => onEdit(task)}
     >
-      <Checkbox
-        checked={task.completed}
-        onChange={() => onToggleComplete(task.id)}
-        size="small"
-        sx={{
-          color: '#BDBDBD',
-          padding: '4px',
-          '&.Mui-checked': { color: '#00B894' },
-        }}
-      />
+      <Box onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={task.completed}
+          onChange={() => onToggleComplete(task.id)}
+          size="small"
+          sx={{
+            color: '#BDBDBD',
+            padding: '4px',
+            '&.Mui-checked': { color: '#00B894' },
+          }}
+        />
+      </Box>
 
       <Box className={styles.titleGroup}>
         <Typography
