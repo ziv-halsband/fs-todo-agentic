@@ -1,97 +1,87 @@
-import { ValidationError } from '@fs-project/backend-common';
+import { ValidationError, NotFoundError } from '@fs-project/backend-common';
 
 import {
   todoRepository,
+  listRepository,
   type CreateTodoData,
   type UpdateTodoData,
+  type TodoFilters,
 } from '../repositories';
 
-import type { Todo } from '../generated/prisma';
+import type { Priority } from '@fs-project/db';
 
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 100;
 
-/**
- * Todo Service
- *
- * Business logic layer for todo operations.
- * Validates input and coordinates with repository.
- *
- * Follows the Service pattern:
- * Controller → Service → Repository → Database
- */
+const VALID_PRIORITIES: Priority[] = ['HIGH', 'MEDIUM', 'LOW'];
+
 class TodoService {
-  /**
-   * Get all todos for a user
-   *
-   * @param userId - User ID from JWT token
-   * @returns Array of todos
-   */
-  async getAllTodos(userId: string): Promise<Todo[]> {
-    return todoRepository.findAllByUserId(userId);
+  async getAllTodos(userId: string, filters?: TodoFilters) {
+    const limit = Math.min(filters?.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
+    const page = Math.max(filters?.page ?? 1, 1);
+    return todoRepository.findAllByUserId(userId, { ...filters, limit, page });
   }
 
-  /**
-   * Get a single todo by ID
-   *
-   * @param id - Todo ID
-   * @param userId - User ID from JWT token
-   * @returns Todo or null
-   */
-  async getTodoById(id: string, userId: string): Promise<Todo | null> {
+  async getTodoById(id: string, userId: string) {
     return todoRepository.findById(id, userId);
   }
 
-  /**
-   * Create a new todo
-   *
-   * @param userId - User ID from JWT token
-   * @param data - Todo creation data
-   * @returns Created todo
-   * @throws ValidationError if title is invalid
-   */
   async createTodo(
     userId: string,
-    data: { title: string; description?: string }
-  ): Promise<Todo> {
-    // Business validation
+    data: {
+      title: string;
+      description?: string;
+      priority?: string;
+      dueDate?: string;
+      starred?: boolean;
+      listId: string;
+    }
+  ) {
     if (!data.title || data.title.trim().length === 0) {
       throw new ValidationError('Title is required');
     }
-
     if (data.title.length > 255) {
       throw new ValidationError('Title must be less than 255 characters');
     }
-
     if (data.description && data.description.length > 1000) {
       throw new ValidationError(
         'Description must be less than 1000 characters'
       );
     }
+    if (!data.listId) {
+      throw new ValidationError('listId is required');
+    }
+
+    await this.verifyListOwnership(data.listId, userId);
+
+    const priority = this.parsePriority(data.priority) ?? 'MEDIUM';
 
     const createData: CreateTodoData = {
       title: data.title.trim(),
       description: data.description?.trim() || null,
+      priority,
+      dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      starred: data.starred ?? false,
+      listId: data.listId,
       userId,
     };
 
     return todoRepository.create(createData);
   }
 
-  /**
-   * Update an existing todo
-   *
-   * @param id - Todo ID
-   * @param userId - User ID from JWT token
-   * @param data - Fields to update
-   * @returns Updated todo
-   * @throws ValidationError if data is invalid
-   * @throws NotFoundError if todo doesn't exist or user doesn't own it
-   */
   async updateTodo(
     id: string,
     userId: string,
-    data: { title?: string; description?: string; completed?: boolean }
-  ): Promise<Todo> {
-    // Business validation
+    data: {
+      title?: string;
+      description?: string;
+      completed?: boolean;
+      starred?: boolean;
+      priority?: string;
+      dueDate?: string | null;
+      listId?: string;
+    }
+  ) {
     if (data.title !== undefined) {
       if (data.title.trim().length === 0) {
         throw new ValidationError('Title cannot be empty');
@@ -100,7 +90,6 @@ class TodoService {
         throw new ValidationError('Title must be less than 255 characters');
       }
     }
-
     if (data.description !== undefined && data.description.length > 1000) {
       throw new ValidationError(
         'Description must be less than 1000 characters'
@@ -108,53 +97,68 @@ class TodoService {
     }
 
     const updateData: UpdateTodoData = {};
-    if (data.title !== undefined) {
-      updateData.title = data.title.trim();
-    }
-    if (data.description !== undefined) {
+    if (data.title !== undefined) updateData.title = data.title.trim();
+    if (data.description !== undefined)
       updateData.description = data.description.trim() || null;
+    if (data.completed !== undefined) updateData.completed = data.completed;
+    if (data.starred !== undefined) updateData.starred = data.starred;
+    if (data.priority !== undefined) {
+      const p = this.parsePriority(data.priority);
+      if (p) updateData.priority = p;
     }
-    if (data.completed !== undefined) {
-      updateData.completed = data.completed;
+    if ('dueDate' in data) {
+      updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+    }
+    if (data.listId !== undefined) {
+      await this.verifyListOwnership(data.listId, userId);
+      updateData.listId = data.listId;
     }
 
     return todoRepository.update(id, userId, updateData);
   }
 
-  /**
-   * Delete a todo
-   *
-   * @param id - Todo ID
-   * @param userId - User ID from JWT token
-   * @throws NotFoundError if todo doesn't exist or user doesn't own it
-   */
   async deleteTodo(id: string, userId: string): Promise<void> {
     return todoRepository.delete(id, userId);
   }
 
-  /**
-   * Get todo statistics for a user
-   *
-   * @param userId - User ID from JWT token
-   * @returns Todo counts
-   */
-  async getTodoStats(userId: string): Promise<{
-    total: number;
-    completed: number;
-    active: number;
-  }> {
+  async getTodoStats(
+    userId: string
+  ): Promise<{ total: number; completed: number; active: number }> {
     const [total, completed] = await Promise.all([
       todoRepository.count(userId),
       todoRepository.count(userId, true),
     ]);
+    return { total, completed, active: total - completed };
+  }
 
-    return {
-      total,
-      completed,
-      active: total - completed,
-    };
+  async getCountsByList(
+    userId: string
+  ): Promise<{ counts: { listId: string; count: number }[]; total: number }> {
+    const counts = await todoRepository.countByList(userId);
+    const total = counts.reduce((sum, r) => sum + r.count, 0);
+    return { counts, total };
+  }
+
+  private parsePriority(value?: string): Priority | undefined {
+    if (!value) return undefined;
+    const upper = value.toUpperCase() as Priority;
+    if (!VALID_PRIORITIES.includes(upper)) {
+      throw new ValidationError(
+        `Invalid priority "${value}". Must be one of: high, medium, low`
+      );
+    }
+    return upper;
+  }
+
+  private async verifyListOwnership(
+    listId: string,
+    userId: string
+  ): Promise<void> {
+    const list = await listRepository.findById(listId, userId);
+    if (!list) {
+      throw new NotFoundError('List not found or access denied');
+    }
   }
 }
 
-// Export singleton instance
 export const todoService = new TodoService();

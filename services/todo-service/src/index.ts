@@ -11,7 +11,7 @@ console.log('🔧 .env loaded:', result.error ? '❌ FAILED' : '✅ SUCCESS');
 console.log('🔧 PORT from env:', process.env.PORT);
 
 import { errorHandler } from './middleware';
-import { todoRoutes } from './routes';
+import { todoRoutes, listRoutes } from './routes';
 
 const app = express();
 const port = process.env.PORT || 3002;
@@ -34,8 +34,9 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', service: 'todo-service' });
 });
 
-// Todo routes: /api/todos
+// Routes
 app.use('/api/todos', todoRoutes);
+app.use('/api/lists', listRoutes);
 
 // Global error handler (must be last!)
 app.use(errorHandler);

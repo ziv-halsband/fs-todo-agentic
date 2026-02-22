@@ -4,7 +4,9 @@ import {
   AppBar,
   Avatar,
   Box,
+  Divider,
   IconButton,
+  ListItemText,
   Menu,
   MenuItem,
   Toolbar,
@@ -70,9 +72,18 @@ export const AppHeader = () => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Typography variant="subtitle2" fontWeight={600} noWrap>
+            {user?.fullName}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {user?.email}
+          </Typography>
+        </Box>
+        <Divider />
         <MenuItem onClick={handleLogout}>
           <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
-          {t.app.logout}
+          <ListItemText primary={t.app.logout} />
         </MenuItem>
       </Menu>
     </Box>

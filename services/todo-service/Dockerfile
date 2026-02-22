@@ -15,6 +15,7 @@ WORKDIR /app
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY packages/backend-common/package.json ./packages/backend-common/
 COPY packages/common/package.json ./packages/common/
+COPY packages/db/package.json ./packages/db/
 COPY services/todo-service/package.json ./services/todo-service/
 
 RUN pnpm install --filter todo-service... --frozen-lockfile --ignore-scripts
@@ -27,21 +28,23 @@ FROM dependencies AS builder
 # Copy shared packages source
 COPY packages/backend-common ./packages/backend-common
 COPY packages/common ./packages/common
+COPY packages/db ./packages/db
 
-# Copy service source + Prisma schema + TS config
+# Copy service source + TS config
 COPY services/todo-service ./services/todo-service
 COPY tsconfig.json ./
 
-WORKDIR /app/services/todo-service
-
-# Build shared packages first (they export from dist/)
-RUN cd /app/packages/common && pnpm run build && \
+# Build shared packages (db needs Prisma generate before tsc)
+RUN cd /app/packages/db && DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" \
+    npx prisma generate --schema ./prisma/schema.prisma && \
+    pnpm run build && cp -r src/generated dist/generated && \
+    cd /app/packages/common && pnpm run build && \
     cd /app/packages/backend-common && pnpm run build
 
-# Generate Prisma → Build TS → Copy generated client into dist
-RUN pnpm prisma generate && \
-    pnpm run build && \
-    cp -r src/generated dist/generated
+WORKDIR /app/services/todo-service
+
+# Build the service
+RUN pnpm run build
 
 # Create standalone production bundle (flat node_modules, no symlinks)
 RUN pnpm deploy --filter todo-service --prod --legacy /app/production

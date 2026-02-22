@@ -1,16 +1,11 @@
 # ============================================
 # Docker Compose - Local Environment
 # ============================================
-# Two modes:
-#   Infrastructure only (for local dev):
-#     docker-compose up -d
-#
-#   Full stack (services in Docker):
-#     docker-compose --profile services up -d
-#
-#   Stop:    docker-compose down
-#   Logs:    docker-compose logs -f
-#   Status:  docker-compose ps
+# Usage:
+#   Start all:  docker-compose up -d
+#   Stop all:   docker-compose down -v
+#   Logs:       docker-compose logs -f
+#   Status:     docker-compose ps
 
 services:
   # ============================================
@@ -44,7 +39,6 @@ services:
   # Auth Service (profile: services)
   # ============================================
   auth-service:
-    profiles: ["services"]
     build:
       context: .
       dockerfile: services/auth-service/Dockerfile
@@ -54,7 +48,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/auth_db?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/app_db?schema=public
       JWT_SECRET: "your-super-secret-jwt-key-change-this-in-production"
       JWT_EXPIRES_IN: "15m"
       REFRESH_TOKEN_EXPIRES_IN: "7d"
@@ -72,11 +66,17 @@ services:
       postgres:
         condition: service_healthy
 
+    develop:
+      watch:
+        - path: ./services/auth-service/src
+          action: rebuild
+        - path: ./packages
+          action: rebuild
+
   # ============================================
   # Todo Service (profile: services)
   # ============================================
   todo-service:
-    profiles: ["services"]
     build:
       context: .
       dockerfile: services/todo-service/Dockerfile
@@ -86,7 +86,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3002
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/todo_db?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/app_db?schema=public
       JWT_SECRET: "your-super-secret-jwt-key-change-this-in-production"
       CORS_ORIGIN: "http://localhost:5173"
 
@@ -96,6 +96,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+    develop:
+      watch:
+        - path: ./services/todo-service/src
+          action: rebuild
+        - path: ./packages
+          action: rebuild
 
 # ============================================
 # Volumes

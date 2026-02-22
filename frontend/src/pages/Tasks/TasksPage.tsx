@@ -1,11 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
+  Alert,
   Box,
+  CircularProgress,
   Collapse,
   Fab,
   FormControl,
   InputAdornment,
   MenuItem,
+  Pagination,
   Select,
   TextField,
   Typography,
@@ -17,18 +20,18 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
 import { useAuthStore } from '../../store/authStore';
 import { useTaskStore } from '../../store/taskStore';
-import {
-  mockGetLists,
-  mockGetTasks,
-  mockToggleTaskComplete,
-  type Task,
-} from '../../services/mockTodoApi';
+import { useTodoStore } from '../../store/todoStore';
+import { useTodosQuery } from '../../hooks/useTodosQuery';
+import { useDebounce } from '../../hooks/useDebounce';
 import { TaskItem } from '../../components/TaskItem';
 import { TaskFormModal } from '../../components/TaskFormModal';
+import type { Task } from '../../services/todoService';
 import styles from './TasksPage.module.scss';
 
 type StatusFilter = 'all' | 'open' | 'completed';
 type PriorityFilter = 'all' | 'high' | 'medium' | 'low';
+
+const PAGE_SIZE = 20;
 
 const getGreeting = (): string => {
   const hour = new Date().getHours();
@@ -40,62 +43,73 @@ const getGreeting = (): string => {
 export const TasksPage = () => {
   const user = useAuthStore((s) => s.user);
   const { selectedListId, searchTerm, setSearchTerm } = useTaskStore();
+  const { lists, fetchLists } = useTodoStore();
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('open');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
+  const [page, setPage] = useState(1);
   const [completedExpanded, setCompletedExpanded] = useState(true);
-  const [, setRevision] = useState(0);
-
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
 
   const firstName = user?.fullName?.split(' ')[0] ?? 'there';
 
-  const allTasks = mockGetTasks({ listId: selectedListId, searchTerm });
+  // Debounce search — input updates instantly, but the query key
+  // (and therefore the API call) only changes after 2 seconds of inactivity.
+  const debouncedSearch = useDebounce(searchTerm, 2000);
 
-  const activeTasks = allTasks
-    .filter((t) => !t.completed)
-    .filter((t) => priorityFilter === 'all' || t.priority === priorityFilter);
+  // Build query params from current filter state.
+  const filters = {
+    ...(selectedListId && { listId: selectedListId }),
+    ...(statusFilter === 'open' && { completed: false }),
+    ...(statusFilter === 'completed' && { completed: true }),
+    ...(priorityFilter !== 'all' && { priority: priorityFilter }),
+    ...(debouncedSearch && { search: debouncedSearch }),
+    page,
+    limit: PAGE_SIZE,
+  };
 
-  const completedTasks = allTasks
-    .filter((t) => t.completed)
-    .filter((t) => priorityFilter === 'all' || t.priority === priorityFilter);
+  const { data, isLoading, isError } = useTodosQuery(filters);
 
-  const showActive = statusFilter !== 'completed';
+  const todos = data?.todos ?? [];
+  const total = data?.total ?? 0;
+  const pageCount = Math.ceil(total / PAGE_SIZE);
+
+  // Load lists once on mount.
+  useEffect(() => {
+    fetchLists();
+  }, [fetchLists]);
+
+  // Reset page when any filter (except page itself) changes.
+  useEffect(() => {
+    setPage(1);
+  }, [selectedListId, statusFilter, priorityFilter, debouncedSearch]);
+
+  const activeTasks = todos.filter((t) => !t.completed);
+  const completedTasks = todos.filter((t) => t.completed);
+  const hasContent = todos.length > 0;
   const showCompleted = statusFilter !== 'open';
 
-  const hasContent =
-    (showActive && activeTasks.length > 0) ||
-    (showCompleted && completedTasks.length > 0);
-
   const sectionTitle = selectedListId
-    ? (mockGetLists().find((l) => l.id === selectedListId)?.name ?? 'Tasks')
-    : "Today's Tasks";
+    ? (lists.find((l) => l.id === selectedListId)?.name ?? 'Tasks')
+    : 'All Tasks';
 
-  const handleToggleComplete = useCallback((id: string) => {
-    mockToggleTaskComplete(id);
-    setRevision((r) => r + 1);
-  }, []);
+  const { toggleComplete } = useTodoStore();
 
-  const handleOpenAdd = () => {
-    setEditingTask(undefined);
-    setModalOpen(true);
-  };
+  const handleToggleComplete = useCallback(
+    (id: string, listId: string, currentCompleted: boolean) =>
+      toggleComplete(id, listId, currentCompleted),
+    [toggleComplete]
+  );
 
   const handleOpenEdit = useCallback((task: Task) => {
     setEditingTask(task);
     setModalOpen(true);
   }, []);
 
-  const handleModalClose = () => {
-    setModalOpen(false);
-    setEditingTask(undefined);
-  };
-
   const handleSaved = () => {
     setModalOpen(false);
     setEditingTask(undefined);
-    setRevision((r) => r + 1);
   };
 
   return (
@@ -114,7 +128,10 @@ export const TasksPage = () => {
           placeholder="Search tasks..."
           size="small"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setPage(1);
+          }}
           className={styles.searchBar}
           InputProps={{
             startAdornment: (
@@ -128,7 +145,10 @@ export const TasksPage = () => {
         <FormControl size="small" sx={{ minWidth: 148 }}>
           <Select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value as StatusFilter);
+              setPage(1);
+            }}
             renderValue={(v) =>
               `Status: ${v === 'all' ? 'All' : v === 'open' ? 'Open' : 'Completed'}`
             }
@@ -142,9 +162,10 @@ export const TasksPage = () => {
         <FormControl size="small" sx={{ minWidth: 148 }}>
           <Select
             value={priorityFilter}
-            onChange={(e) =>
-              setPriorityFilter(e.target.value as PriorityFilter)
-            }
+            onChange={(e) => {
+              setPriorityFilter(e.target.value as PriorityFilter);
+              setPage(1);
+            }}
             renderValue={(v) =>
               `Priority: ${v === 'all' ? 'All' : v.charAt(0).toUpperCase() + v.slice(1)}`
             }
@@ -162,9 +183,26 @@ export const TasksPage = () => {
           <Typography variant="subtitle1" fontWeight={700}>
             {sectionTitle}
           </Typography>
+          {total > 0 && (
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+              ({total} total)
+            </Typography>
+          )}
         </Box>
 
-        {!hasContent && (
+        {isLoading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <CircularProgress size={32} />
+          </Box>
+        )}
+
+        {!isLoading && isError && (
+          <Alert severity="error" sx={{ my: 2 }}>
+            Failed to load tasks
+          </Alert>
+        )}
+
+        {!isLoading && !isError && !hasContent && (
           <Typography
             variant="body2"
             color="text.secondary"
@@ -174,7 +212,8 @@ export const TasksPage = () => {
           </Typography>
         )}
 
-        {showActive &&
+        {!isLoading &&
+          statusFilter !== 'completed' &&
           activeTasks.map((task) => (
             <TaskItem
               key={task.id}
@@ -184,7 +223,7 @@ export const TasksPage = () => {
             />
           ))}
 
-        {showCompleted && completedTasks.length > 0 && (
+        {!isLoading && showCompleted && completedTasks.length > 0 && (
           <Box className={styles.completedSection}>
             <Box
               className={styles.completedHeader}
@@ -211,12 +250,27 @@ export const TasksPage = () => {
             </Collapse>
           </Box>
         )}
+
+        {!isLoading && pageCount > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 3, pb: 1 }}>
+            <Pagination
+              count={pageCount}
+              page={page}
+              onChange={(_, value) => setPage(value)}
+              size="small"
+              color="primary"
+            />
+          </Box>
+        )}
       </Box>
 
       <Fab
         color="primary"
         aria-label="add task"
-        onClick={handleOpenAdd}
+        onClick={() => {
+          setEditingTask(undefined);
+          setModalOpen(true);
+        }}
         sx={{ position: 'fixed', bottom: 32, right: 32 }}
       >
         <AddIcon />
@@ -226,7 +280,10 @@ export const TasksPage = () => {
         open={modalOpen}
         task={editingTask}
         defaultListId={selectedListId}
-        onClose={handleModalClose}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingTask(undefined);
+        }}
         onSaved={handleSaved}
       />
     </Box>

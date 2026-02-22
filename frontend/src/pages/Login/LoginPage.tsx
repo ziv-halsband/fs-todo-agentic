@@ -50,7 +50,7 @@ export const LoginPage = () => {
       setApiError(null);
       const response = await login(data);
       setUser(response.user);
-      navigate('/dashboard');
+      navigate('/tasks');
     } catch (error) {
       if (error instanceof ApiError) {
         setApiError(error.message);

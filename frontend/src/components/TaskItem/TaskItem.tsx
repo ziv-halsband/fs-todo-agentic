@@ -1,7 +1,7 @@
 import { Box, Checkbox, Chip, Typography } from '@mui/material';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 
-import type { Task } from '../../services/mockTodoApi';
+import type { Task } from '../../services/todoService';
 import styles from './TaskItem.module.scss';
 
 const PRIORITY_CONFIG = {
@@ -29,7 +29,11 @@ const formatDueDate = (dateStr: string): string => {
 
 interface Props {
   task: Task;
-  onToggleComplete: (id: string) => void;
+  onToggleComplete: (
+    id: string,
+    listId: string,
+    currentCompleted: boolean
+  ) => void;
   onEdit: (task: Task) => void;
 }
 
@@ -44,7 +48,9 @@ export const TaskItem = ({ task, onToggleComplete, onEdit }: Props) => {
       <Box onClick={(e) => e.stopPropagation()}>
         <Checkbox
           checked={task.completed}
-          onChange={() => onToggleComplete(task.id)}
+          onChange={() =>
+            onToggleComplete(task.id, task.listId, task.completed)
+          }
           size="small"
           sx={{
             color: '#BDBDBD',

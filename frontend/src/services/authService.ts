@@ -17,6 +17,13 @@ export type User = {
   updatedAt: string;
 };
 
+// What the backend actually returns: { success, data: { user } }
+type RawAuthResponse = {
+  success: boolean;
+  data: { user: User };
+};
+
+// What our service functions expose to callers: { success, user }
 export type AuthResponse = {
   success: boolean;
   user: User;
@@ -28,14 +35,17 @@ export async function signup(data: {
   email: string;
   password: string;
   fullName: string;
-}) {
-  const response = await api.post<AuthResponse>('/auth/signup', data);
-  return response.data;
+}): Promise<AuthResponse> {
+  const response = await api.post<RawAuthResponse>('/auth/signup', data);
+  return { success: response.data.success, user: response.data.data.user };
 }
 
-export async function login(data: { email: string; password: string }) {
-  const response = await api.post<AuthResponse>('/auth/login', data);
-  return response.data;
+export async function login(data: {
+  email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  const response = await api.post<RawAuthResponse>('/auth/login', data);
+  return { success: response.data.success, user: response.data.data.user };
 }
 
 export async function logout() {
@@ -43,9 +53,9 @@ export async function logout() {
   return response.data;
 }
 
-export async function getCurrentUser() {
-  const response = await api.get<AuthResponse>('/auth/me');
-  return response.data;
+export async function getCurrentUser(): Promise<AuthResponse> {
+  const response = await api.get<RawAuthResponse>('/auth/me');
+  return { success: response.data.success, user: response.data.data.user };
 }
 
 export async function refreshToken() {

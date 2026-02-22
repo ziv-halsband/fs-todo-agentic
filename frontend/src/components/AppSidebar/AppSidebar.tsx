@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Badge,
   Box,
   Divider,
   Drawer,
@@ -10,6 +9,7 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
+  Badge,
 } from '@mui/material';
 import ChecklistIcon from '@mui/icons-material/Checklist';
 import WorkIcon from '@mui/icons-material/Work';
@@ -19,15 +19,16 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import HomeIcon from '@mui/icons-material/Home';
+import StarIcon from '@mui/icons-material/Star';
+import SchoolIcon from '@mui/icons-material/School';
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import AddIcon from '@mui/icons-material/Add';
 
 import { en } from '../../i18n';
 import { useTaskStore } from '../../store/taskStore';
-import {
-  mockGetLists,
-  mockGetTasks,
-  type List as TaskList,
-} from '../../services/mockTodoApi';
+import { useTodoStore } from '../../store/todoStore';
+import { CreateListModal } from '../CreateListModal';
 import styles from './AppSidebar.module.scss';
 
 const t = en;
@@ -36,6 +37,11 @@ const listIconMap: Record<string, React.ReactNode> = {
   work: <WorkIcon fontSize="small" />,
   person: <PersonIcon fontSize="small" />,
   shopping_cart: <ShoppingCartIcon fontSize="small" />,
+  list: <FormatListBulletedIcon fontSize="small" />,
+  home: <HomeIcon fontSize="small" />,
+  star: <StarIcon fontSize="small" />,
+  school: <SchoolIcon fontSize="small" />,
+  fitness: <FitnessCenterIcon fontSize="small" />,
 };
 
 const modules = [
@@ -66,24 +72,14 @@ const modules = [
 ];
 
 export const AppSidebar = () => {
-  const [lists, setLists] = useState<TaskList[]>([]);
-  const { selectedListId, setSelectedList, resetFilter } = useTaskStore();
+  const { selectedListId, setSelectedList } = useTaskStore();
+  const { lists, counts, fetchLists, fetchCounts } = useTodoStore();
+  const [createListOpen, setCreateListOpen] = useState(false);
 
   useEffect(() => {
-    const data = mockGetLists();
-    setLists(data);
-  }, []);
+    fetchCounts();
+  }, [fetchCounts]);
 
-  const handleListClick = (listId: string | null) => {
-    setSelectedList(listId);
-    resetFilter();
-  };
-
-  const getIncompleteCount = (listId?: string) => {
-    return mockGetTasks({ listId, filter: 'todo' }).length;
-  };
-
-  // Render sections
   const renderModules = () => (
     <Box className={styles.section}>
       <Typography variant="caption" className={styles.sectionLabel}>
@@ -117,14 +113,14 @@ export const AppSidebar = () => {
         <Typography variant="caption" className={styles.sectionLabel}>
           {t.tasks.myLists}
         </Typography>
-        <IconButton size="small" disabled>
+        <IconButton size="small" onClick={() => setCreateListOpen(true)}>
           <AddIcon sx={{ fontSize: 16 }} />
         </IconButton>
       </Box>
       <List disablePadding>
         <ListItemButton
           selected={selectedListId === null}
-          onClick={() => handleListClick(null)}
+          onClick={() => setSelectedList(null)}
           className={styles.listItem}
         >
           <ListItemIcon sx={{ minWidth: 36 }}>
@@ -135,7 +131,7 @@ export const AppSidebar = () => {
             primaryTypographyProps={{ variant: 'body2' }}
           />
           <Badge
-            badgeContent={getIncompleteCount()}
+            badgeContent={counts.total}
             color="default"
             className={styles.badge}
           />
@@ -145,18 +141,20 @@ export const AppSidebar = () => {
           <ListItemButton
             key={list.id}
             selected={selectedListId === list.id}
-            onClick={() => handleListClick(list.id)}
+            onClick={() => setSelectedList(list.id)}
             className={styles.listItem}
           >
             <ListItemIcon sx={{ minWidth: 36, color: list.color }}>
-              {listIconMap[list.icon]}
+              {listIconMap[list.icon] ?? (
+                <FormatListBulletedIcon fontSize="small" />
+              )}
             </ListItemIcon>
             <ListItemText
               primary={list.name}
               primaryTypographyProps={{ variant: 'body2' }}
             />
             <Badge
-              badgeContent={getIncompleteCount(list.id)}
+              badgeContent={counts.byList[list.id] ?? 0}
               color="default"
               className={styles.badge}
             />
@@ -166,14 +164,24 @@ export const AppSidebar = () => {
     </Box>
   );
 
-  // Main render
   return (
-    <Drawer variant="permanent" className={styles.drawer}>
-      <Box className={styles.sidebarContent}>
-        {renderModules()}
-        <Divider sx={{ my: 1 }} />
-        {renderMyLists()}
-      </Box>
-    </Drawer>
+    <>
+      <Drawer variant="permanent" className={styles.drawer}>
+        <Box className={styles.sidebarContent}>
+          {renderModules()}
+          <Divider sx={{ my: 1 }} />
+          {renderMyLists()}
+        </Box>
+      </Drawer>
+
+      <CreateListModal
+        open={createListOpen}
+        onClose={() => setCreateListOpen(false)}
+        onSaved={() => {
+          setCreateListOpen(false);
+          fetchLists();
+        }}
+      />
+    </>
   );
 };

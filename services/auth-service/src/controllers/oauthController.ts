@@ -58,7 +58,7 @@ export const googleCallback = (
 
     // Redirect to frontend dashboard
     // Frontend will automatically have the cookies!
-    return res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
+    return res.redirect(`${process.env.FRONTEND_URL}/tasks`);
   } catch (error) {
     next(error);
   }

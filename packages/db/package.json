@@ -1,0 +1,25 @@
+{
+  "name": "@fs-project/db",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared Prisma database client — single source of truth for all services",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "generate": "dotenv -e ../../.env -- prisma generate --schema ./prisma/schema.prisma",
+    "migrate:dev": "dotenv -e ../../.env -- prisma migrate dev --schema ./prisma/schema.prisma",
+    "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy --schema ./prisma/schema.prisma",
+    "migrate:reset": "dotenv -e ../../.env -- prisma migrate reset --schema ./prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.1"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^8.0.0",
+    "prisma": "^5.7.1",
+    "typescript": "^5.3.3"
+  }
+}

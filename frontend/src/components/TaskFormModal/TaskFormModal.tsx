@@ -8,19 +8,15 @@ import {
   MenuItem,
   Stack,
   TextField,
+  Alert,
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { type Dayjs } from 'dayjs';
 
-import {
-  mockAddTask,
-  mockGetLists,
-  mockUpdateTask,
-  type Priority,
-  type Task,
-} from '../../services/mockTodoApi';
+import { useTodoStore } from '../../store/todoStore';
+import type { Priority, Task } from '../../services/todoService';
 
 interface Props {
   open: boolean;
@@ -43,18 +39,21 @@ export const TaskFormModal = ({
   onClose,
   onSaved,
 }: Props) => {
-  const lists = mockGetLists();
+  const { lists, addTodo, editTodo } = useTodoStore();
   const isEdit = Boolean(task);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
-  const [listId, setListId] = useState(lists[0]?.id ?? '');
+  const [listId, setListId] = useState('');
   const [dueDate, setDueDate] = useState<Dayjs | null>(null);
   const [titleError, setTitleError] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    setSaveError(null);
     if (task) {
       setTitle(task.title);
       setDescription(task.description ?? '');
@@ -71,27 +70,36 @@ export const TaskFormModal = ({
     setTitleError(false);
   }, [open, task, defaultListId, lists]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim()) {
       setTitleError(true);
       return;
     }
 
-    const payload = {
-      title: title.trim(),
-      description: description.trim() || undefined,
-      priority,
-      listId,
-      dueDate: dueDate ? dueDate.toISOString() : undefined,
-    };
+    setSaving(true);
+    setSaveError(null);
 
-    if (isEdit && task) {
-      mockUpdateTask(task.id, payload);
-    } else {
-      mockAddTask(payload);
+    try {
+      const payload = {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        priority,
+        listId,
+        dueDate: dueDate ? dueDate.toISOString() : undefined,
+      };
+
+      if (isEdit && task) {
+        await editTodo(task.id, payload);
+      } else {
+        await addTodo(payload);
+      }
+
+      onSaved();
+    } catch {
+      setSaveError('Failed to save task. Please try again.');
+    } finally {
+      setSaving(false);
     }
-
-    onSaved();
   };
 
   return (
@@ -102,6 +110,8 @@ export const TaskFormModal = ({
 
       <DialogContent>
         <Stack spacing={2.5} sx={{ pt: 1 }}>
+          {saveError && <Alert severity="error">{saveError}</Alert>}
+
           <TextField
             label="Title"
             placeholder="What needs to be done?"
@@ -152,6 +162,7 @@ export const TaskFormModal = ({
               onChange={(e) => setListId(e.target.value)}
               size="small"
               sx={{ flex: 1 }}
+              disabled={lists.length === 0}
             >
               {lists.map((list) => (
                 <MenuItem key={list.id} value={list.id}>
@@ -173,11 +184,16 @@ export const TaskFormModal = ({
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onClose} color="inherit">
+        <Button onClick={onClose} color="inherit" disabled={saving}>
           Cancel
         </Button>
-        <Button onClick={handleSave} variant="contained" disableElevation>
-          {isEdit ? 'Save Changes' : 'Add Task'}
+        <Button
+          onClick={handleSave}
+          variant="contained"
+          disableElevation
+          disabled={saving}
+        >
+          {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Task'}
         </Button>
       </DialogActions>
     </Dialog>

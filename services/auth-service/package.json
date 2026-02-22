@@ -5,19 +5,15 @@
   "description": "Authentication microservice",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "pnpm prisma:generate && tsx watch src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio",
-    "test": "jest",
-    "postinstall": "prisma generate"
+    "test": "jest"
   },
   "dependencies": {
     "@fs-project/backend-common": "workspace:*",
     "@fs-project/common": "workspace:*",
-    "@prisma/client": "^5.7.1",
+    "@fs-project/db": "workspace:*",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -28,7 +24,6 @@
     "jsonwebtoken": "^9.0.2",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
-    "prisma": "^5.7.1",
     "redis": "^4.6.12"
   },
   "devDependencies": {

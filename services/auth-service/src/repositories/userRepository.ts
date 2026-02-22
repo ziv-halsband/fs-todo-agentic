@@ -2,8 +2,7 @@ import { ConflictError, NotFoundError } from '@fs-project/backend-common';
 
 import prisma from '../config/database';
 
-import type { User } from '../generated/prisma';
-import type { UserRole, AuthProvider } from '@fs-project/common';
+import type { User, UserRole, AuthProvider } from '@fs-project/db';
 
 /**
  * Data Transfer Objects (DTOs)

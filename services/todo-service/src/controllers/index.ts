@@ -6,3 +6,4 @@
  */
 
 export * as todoController from './todoController';
+export * as listController from './listController';

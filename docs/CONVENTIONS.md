@@ -7,12 +7,17 @@ This document defines repo-specific coding standards for this project. All patte
 ```
 fs-project/
 ├── services/
-│   └── auth-service/          # Authentication microservice
-├── frontend/                   # React SPA
-├── docs/                       # Documentation
-├── docker-compose.yml          # Local infrastructure
-├── pnpm-workspace.yaml         # Workspace config
-└── tsconfig.json               # Root TS config
+│   ├── auth-service/          # Authentication microservice (port 3001)
+│   └── todo-service/          # Todo/list microservice (port 3002)
+├── packages/
+│   ├── backend-common/        # Shared JWT utils, auth middleware, error classes
+│   ├── common/                # Shared TypeScript types/enums (FE + BE)
+│   └── db/                    # Shared Prisma client and schema
+├── frontend/                  # React SPA
+├── scripts/                   # Utility scripts (e.g. init-databases.sh)
+├── docs/                      # Documentation
+├── docker-compose.yml
+└── pnpm-workspace.yaml
 ```
 
 ## TypeScript Standards
@@ -34,20 +39,21 @@ This project uses **strict mode** (see `tsconfig.json`):
 - **kebab-case**: Folders, config files (`auth-service/`, `docker-compose.yml`)
 - **UPPER_SNAKE_CASE**: Environment variables, constants (`JWT_SECRET`, `MAX_RETRIES`)
 
-## Backend (auth-service)
+## Backend (Both Services)
+
+Both `auth-service` and `todo-service` follow the same folder structure and patterns.
 
 ### Folder Structure
 
 ```
-services/auth-service/src/
+services/<service>/src/
 ├── config/          # Configuration (database, passport)
 ├── controllers/     # HTTP request handlers
-├── middleware/      # Express middleware (auth, validators, errorHandler)
+├── middleware/      # Express middleware (errorHandler, validators)
 ├── repositories/    # Data access layer (Prisma queries)
 ├── routes/          # API route definitions
 ├── services/        # Business logic layer
 ├── types/           # TypeScript type definitions
-├── utils/           # Helper functions (errors, jwt, password)
 └── index.ts         # Entry point
 ```
 
@@ -55,68 +61,54 @@ services/auth-service/src/
 
 **Controller → Service → Repository**
 
-Controllers handle HTTP, services contain business logic, repositories access database.
+Controllers handle HTTP, services contain business logic, repositories access the database.
 
 ```typescript
-// Example: Signup flow
-authController.signup()        // Parse request, set cookies, format response
-  → authService.signup()       // Hash password, validate business rules
-    → userRepository.create()  // Prisma database query
+// Example: create todo flow
+todoController.create()        // Parse request, format response
+  → todoService.create()       // Validate business rules
+    → todoRepository.create()  // Prisma database query
 ```
+
+### Shared Packages (Backend)
+
+- **`@fs-project/backend-common`**: Import `authenticate` middleware for route protection, and error classes (`ValidationError`, `UnauthorizedError`, `NotFoundError`, `ConflictError`, `ForbiddenError`)
+- **`@fs-project/common`**: Shared enums and input types (`Priority`, `CreateTodoInput`, etc.)
+- **`@fs-project/db`**: Import `prisma` singleton client; never instantiate `PrismaClient` directly in a service
 
 ### Error Handling
 
-All errors extend `AppError` (see `utils/errors.ts`):
+All errors extend `AppError` (from `@fs-project/backend-common`):
 
 ```typescript
-// Available error classes:
-ValidationError; // 400 - Invalid input
-UnauthorizedError; // 401 - Auth required/failed
-ForbiddenError; // 403 - No permission
-NotFoundError; // 404 - Resource not found
-ConflictError; // 409 - Duplicate resource
-
-// Usage in code:
-throw new ValidationError('Email is required');
-throw new UnauthorizedError('Invalid credentials');
+throw new ValidationError('Email is required'); // 400
+throw new UnauthorizedError('Invalid credentials'); // 401
+throw new NotFoundError('Todo not found'); // 404
+throw new ConflictError('Email already in use'); // 409
 ```
 
-Errors are caught by `errorHandler` middleware and returned as JSON.
+Errors are caught by the `errorHandler` middleware and returned as JSON.
 
 ### Input Validation
 
-Uses `express-validator` (see `middleware/validators.ts`):
-
-```typescript
-// Validation chains exported from validators.ts:
-validateSignup; // Email, password, fullName
-validateLogin; // Email, password
-validateRefresh; // No body validation
-
-// Usage in routes:
-router.post('/signup', validateSignup, signup);
-```
+Uses `express-validator` in `middleware/validators.ts`. Validation chains are composed and applied per route.
 
 ### API Response Format
 
-All endpoints return consistent structure:
-
 ```typescript
-// Success response:
-{ success: true, data: { user: {...} } }
+// Success:
+{ success: true, data: { ... } }
 
-// Error response:
+// Error:
 { success: false, error: { message: "...", code: 400 } }
 ```
-
-See actual examples in `controllers/authController.ts`.
 
 ### Authentication & Cookies
 
 JWT tokens stored in **HttpOnly cookies** (XSS protection):
 
-- `accessToken` - 15 minutes lifetime
-- `refreshToken` - 7 days lifetime
+- `accessToken` — 15 minutes
+- `refreshToken` — 7 days
 
 Cookie settings: `httpOnly: true`, `secure` (production only), `sameSite: 'strict'`
 
@@ -126,81 +118,64 @@ Cookie settings: `httpOnly: true`, `secure` (production only), `sameSite: 'stric
 
 ```
 frontend/src/
-├── pages/           # Page components (LoginPage, SignupPage, DashboardPage)
-├── services/        # API clients (api.ts, authService.ts)
-├── store/           # Zustand stores (authStore.ts)
+├── components/      # Reusable UI components (one folder per component)
+├── pages/           # Page-level components (LoginPage, TasksPage, etc.)
+├── services/        # API clients (api.ts, authService.ts, todoService.ts)
+├── store/           # Zustand stores (authStore, taskStore, todoStore)
+├── hooks/           # Custom React hooks
+├── lib/             # Utilities (e.g. React Query client setup)
+├── i18n/            # Internationalization config
+├── theme/           # MUI theme configuration
 ├── assets/          # Static assets
-├── App.tsx          # Root component
 └── main.tsx         # Entry point
 ```
 
 ### API Client Pattern
 
-Base axios instance in `services/api.ts`:
+Two Axios instances in `services/api.ts`:
 
-```typescript
-// Configured with:
-- baseURL: VITE_API_URL env variable
-- withCredentials: true  // Sends cookies
-- Response interceptor: Transforms errors to ApiError class
-```
+- `api` — points to auth-service (`VITE_API_URL`, default port 3001)
+- `todoApi` — points to todo-service (`VITE_TODO_API_URL`, default port 3002)
+
+Both are configured with `withCredentials: true` and share a single token-refresh interceptor (queues concurrent 401s, calls `POST /auth/refresh` once, then retries).
 
 Service files wrap specific endpoints:
 
 ```typescript
-// services/authService.ts exports:
-login(email, password);
-signup(data);
-getCurrentUser();
-logout();
+// services/authService.ts  → login, signup, getCurrentUser, logout
+// services/todoService.ts  → getLists, createList, getTodos, createTodo, updateTodo, deleteTodo
 ```
 
-### State Management (Zustand)
+### State Management
 
-Store pattern in `store/authStore.ts`:
+The frontend uses two complementary tools:
 
-```typescript
-interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  setUser: (user: User) => void;
-  clearUser: () => void;
-  checkAuth: () => Promise<void>;
-  logout: () => Promise<void>;
-}
+| Tool            | What it manages                                                  |
+| --------------- | ---------------------------------------------------------------- |
+| **Zustand**     | Client/UI state: auth user, selected list, search term           |
+| **React Query** | Server state: todos, lists — with caching and cache invalidation |
 
-// Usage:
-const { user, isAuthenticated, logout } = useAuthStore();
-```
+Stores in `store/`:
 
-State + actions in same store. No separate actions file.
+- `authStore` — `user`, `isAuthenticated`, `isLoading`; actions: `checkAuth`, `logout`
+- `taskStore` — `selectedListId`, `searchTerm`; UI state only, no API calls
+- `todoStore` — `todos`, `lists`; wraps React Query mutations and invalidations
 
-### Styling (SCSS Modules)
+State + actions live in the same store file. No separate actions file.
 
-Component-scoped styles:
+### Styling
 
-```typescript
-// LoginPage.module.scss
-.container { ... }
-.form { ... }
-
-// LoginPage.tsx
-import styles from './LoginPage.module.scss';
-<div className={styles.container}>...</div>
-```
-
-Only used for pages so far. MUI components handle most styling.
+MUI components handle most styling. SCSS Modules (`.module.scss`) are used for page-level layout overrides where MUI is insufficient.
 
 ## Testing
 
-Testing framework configured: **Jest** (in auth-service package.json)
+Testing framework configured: **Jest** (in auth-service and todo-service `package.json`)
 
 **Current status**: No tests directory exists yet. Tests to be added.
 
 When adding tests, place in:
 
-- Backend: `services/auth-service/__tests__/` or `services/auth-service/src/**/*.test.ts`
+- Backend: `services/<service>/__tests__/` or `src/**/*.test.ts`
 - Frontend: `frontend/src/**/*.test.tsx`
 
 ## Code Quality Checks
@@ -210,8 +185,6 @@ Pre-commit hooks (Husky + lint-staged) run:
 - ESLint
 - Prettier
 - TypeScript type checking
-
-Available commands:
 
 ```bash
 pnpm lint          # ESLint check
@@ -226,19 +199,20 @@ pnpm type-check    # TypeScript check
 
 - ✅ Use strict TypeScript types (no `any`)
 - ✅ Follow layered architecture (controller → service → repository)
-- ✅ Use custom error classes from `utils/errors.ts`
+- ✅ Use error classes from `@fs-project/backend-common`
+- ✅ Use `prisma` from `@fs-project/db` — never create a new `PrismaClient`
 - ✅ Validate all user input with `express-validator`
 - ✅ Store tokens in HttpOnly cookies only
 - ✅ Return consistent API response format (`{ success, data/error }`)
-- ✅ Use Zustand for client state
-- ✅ Use SCSS modules for component styles
+- ✅ Use Zustand for UI/auth state, React Query for server data
 
 ### Don't:
 
 - ❌ Commit `.env` files or secrets
-- ❌ Use `any` type without good reason
+- ❌ Use `any` type without strong justification
 - ❌ Put business logic in controllers
 - ❌ Store JWT in localStorage (XSS risk)
 - ❌ Return tokens in API response body
 - ❌ Skip input validation
 - ❌ Use default exports (prefer named exports)
+- ❌ Instantiate `PrismaClient` directly in a service — use `@fs-project/db`

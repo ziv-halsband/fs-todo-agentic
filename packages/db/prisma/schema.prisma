@@ -1,0 +1,108 @@
+// =============================================================
+// Shared Prisma Schema — @fs-project/db
+//
+// Single source of truth for ALL database models.
+// Both auth-service and todo-service import the generated client
+// from this package instead of maintaining their own schemas.
+//
+// Because we use one database, we get real FK constraints between
+// User, List and Todo — no application-level userId trust needed.
+// =============================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ────────────────────────────────────────────────────
+
+enum UserRole {
+  USER
+  EDITOR
+  ADMIN
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+// ── Models ───────────────────────────────────────────────────
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String?      @map("password_hash")
+  fullName     String       @map("full_name")
+  avatarUrl    String?      @map("avatar_url")
+  role         UserRole     @default(USER)
+  isVerified   Boolean      @default(true) @map("is_verified")
+  provider     AuthProvider @default(EMAIL)
+  providerId   String?      @map("provider_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations — deleting a user cascades to their lists and todos
+  lists List[]
+  todos Todo[]
+
+  @@unique([provider, providerId], name: "provider_user")
+  @@index([email])
+  @@map("users")
+}
+
+model List {
+  id    String @id @default(uuid())
+  name  String
+  icon  String @default("list")
+  color String @default("#6C5CE7")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  todos Todo[]
+
+  @@index([userId])
+  @@map("lists")
+}
+
+model Todo {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  completed   Boolean   @default(false)
+  starred     Boolean   @default(false)
+  priority    Priority  @default(MEDIUM)
+  dueDate     DateTime? @map("due_date")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  listId String @map("list_id")
+  list   List   @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([listId])
+  @@index([completed])
+  @@index([createdAt])
+  @@map("todos")
+}

@@ -2,17 +2,15 @@ import { NotFoundError } from '@fs-project/backend-common';
 
 import prisma from '../config/database';
 
-import type { Todo } from '../generated/prisma';
-
-
-/**
- * Data Transfer Objects (DTOs)
- * These define the shape of data going in/out of repository
- */
+import type { Priority } from '@fs-project/db';
 
 export interface CreateTodoData {
   title: string;
   description?: string | null;
+  priority?: Priority;
+  dueDate?: Date | null;
+  starred?: boolean;
+  listId: string;
   userId: string;
 }
 
@@ -20,119 +18,102 @@ export interface UpdateTodoData {
   title?: string;
   description?: string | null;
   completed?: boolean;
+  starred?: boolean;
+  priority?: Priority;
+  dueDate?: Date | null;
+  listId?: string;
 }
 
-/**
- * Todo Repository
- *
- * Handles all database operations for todos.
- * Follows the Repository pattern for clean separation of concerns.
- *
- * Business Rules:
- * - Users can only access their own todos
- * - All operations verify userId ownership
- */
+export interface TodoFilters {
+  listId?: string;
+  completed?: boolean;
+  priority?: Priority;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+const TODO_INCLUDE = { list: true } as const;
+
 class TodoRepository {
-  /**
-   * Find all todos for a specific user
-   *
-   * @param userId - User ID from JWT token
-   * @returns Array of todos
-   */
-  async findAllByUserId(userId: string): Promise<Todo[]> {
-    return prisma.todo.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' }, // Newest first
-    });
+  async findAllByUserId(
+    userId: string,
+    filters?: TodoFilters
+  ): Promise<{
+    items: Awaited<ReturnType<typeof prisma.todo.findMany>>;
+    total: number;
+  }> {
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 50;
+    const skip = (page - 1) * limit;
+
+    const where = {
+      userId,
+      ...(filters?.listId && { listId: filters.listId }),
+      ...(filters?.completed !== undefined && { completed: filters.completed }),
+      ...(filters?.priority && { priority: filters.priority }),
+      ...(filters?.search && {
+        title: { contains: filters.search, mode: 'insensitive' as const },
+      }),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.todo.findMany({
+        where,
+        include: TODO_INCLUDE,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.todo.count({ where }),
+    ]);
+
+    return { items, total };
   }
 
-  /**
-   * Find a specific todo by ID
-   * Verifies ownership (userId must match)
-   *
-   * @param id - Todo ID
-   * @param userId - User ID from JWT token
-   * @returns Todo or null if not found/not owned
-   */
-  async findById(id: string, userId: string): Promise<Todo | null> {
+  async findById(id: string, userId: string) {
     return prisma.todo.findFirst({
-      where: {
-        id,
-        userId, // Ensures user owns this todo
-      },
+      where: { id, userId },
+      include: TODO_INCLUDE,
     });
   }
 
-  /**
-   * Create a new todo
-   *
-   * @param data - Todo data (title, description, userId)
-   * @returns Created todo
-   */
-  async create(data: CreateTodoData): Promise<Todo> {
+  async create(data: CreateTodoData) {
     return prisma.todo.create({
       data: {
         title: data.title,
         description: data.description,
+        priority: data.priority ?? 'MEDIUM',
+        dueDate: data.dueDate,
+        starred: data.starred ?? false,
         userId: data.userId,
+        listId: data.listId,
       },
+      include: TODO_INCLUDE,
     });
   }
 
-  /**
-   * Update an existing todo
-   * Verifies ownership before updating
-   *
-   * @param id - Todo ID
-   * @param userId - User ID from JWT token
-   * @param data - Fields to update
-   * @returns Updated todo
-   * @throws NotFoundError if todo doesn't exist or user doesn't own it
-   */
-  async update(
-    id: string,
-    userId: string,
-    data: UpdateTodoData
-  ): Promise<Todo> {
-    // First, verify the todo exists and user owns it
-    const existingTodo = await this.findById(id, userId);
-    if (!existingTodo) {
-      throw new NotFoundError('Todo not found or access denied');
-    }
-
-    return prisma.todo.update({
-      where: { id },
+  async update(id: string, userId: string, data: UpdateTodoData) {
+    // Atomic ownership check + update: updateMany returns { count } in one query,
+    // eliminating the TOCTOU window between a separate findFirst and update.
+    const { count } = await prisma.todo.updateMany({
+      where: { id, userId },
       data,
     });
-  }
-
-  /**
-   * Delete a todo
-   * Verifies ownership before deleting
-   *
-   * @param id - Todo ID
-   * @param userId - User ID from JWT token
-   * @throws NotFoundError if todo doesn't exist or user doesn't own it
-   */
-  async delete(id: string, userId: string): Promise<void> {
-    // First, verify the todo exists and user owns it
-    const existingTodo = await this.findById(id, userId);
-    if (!existingTodo) {
+    if (count === 0) {
       throw new NotFoundError('Todo not found or access denied');
     }
-
-    await prisma.todo.delete({
-      where: { id },
-    });
+    // Fetch the updated record with relations after confirming ownership.
+    return prisma.todo.findFirst({ where: { id }, include: TODO_INCLUDE });
   }
 
-  /**
-   * Count todos for a user (optional, for future stats)
-   *
-   * @param userId - User ID
-   * @param completed - Filter by completion status
-   * @returns Count of todos
-   */
+  async delete(id: string, userId: string): Promise<void> {
+    const { count } = await prisma.todo.deleteMany({ where: { id, userId } });
+    if (count === 0) {
+      throw new NotFoundError('Todo not found or access denied');
+    }
+  }
+
   async count(userId: string, completed?: boolean): Promise<number> {
     return prisma.todo.count({
       where: {
@@ -141,7 +122,17 @@ class TodoRepository {
       },
     });
   }
+
+  async countByList(
+    userId: string
+  ): Promise<{ listId: string; count: number }[]> {
+    const rows = await prisma.todo.groupBy({
+      by: ['listId'],
+      where: { userId, completed: false },
+      _count: { _all: true },
+    });
+    return rows.map((r) => ({ listId: r.listId, count: r._count._all }));
+  }
 }
 
-// Export singleton instance
 export const todoRepository = new TodoRepository();

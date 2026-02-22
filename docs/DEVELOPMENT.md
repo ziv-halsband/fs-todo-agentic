@@ -23,23 +23,30 @@ pnpm install
 
 ### 2. Environment Configuration
 
-**Auth Service** (`services/auth-service/.env`):
-
-Required variables:
+**Root `.env`** (used by `packages/db` Prisma commands):
 
 - `DATABASE_URL` - Postgres connection string
-- `JWT_SECRET` - Secret key for signing tokens
-- `JWT_EXPIRES_IN` - Access token lifetime (e.g., "15m")
-- `REFRESH_TOKEN_EXPIRES_IN` - Refresh token lifetime (e.g., "7d")
-- `CORS_ORIGIN` - Frontend URL for CORS
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL` - Google OAuth credentials
-- `FRONTEND_URL` - Frontend URL for OAuth redirects
 
-See existing `.env` file for example values.
+**Auth Service** (`services/auth-service/.env`):
 
-**Frontend** (create `frontend/.env` if needed):
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `JWT_EXPIRES_IN`
+- `REFRESH_TOKEN_EXPIRES_IN`
+- `CORS_ORIGIN`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`
+- `FRONTEND_URL`
 
-- `VITE_API_URL` - Auth service URL (default: http://localhost:3001)
+**Todo Service** (`services/todo-service/.env`):
+
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `CORS_ORIGIN`
+
+**Frontend** (`frontend/.env`):
+
+- `VITE_API_URL` - Auth service URL (default: `http://localhost:3001`)
+- `VITE_TODO_API_URL` - Todo service URL (default: `http://localhost:3002`)
 
 ### 3. Start Infrastructure
 
@@ -53,31 +60,33 @@ docker-compose ps
 
 ### 4. Database Setup
 
+Prisma schema and migrations live in `packages/db`.
+
 ```bash
-cd services/auth-service
+cd packages/db
 
 # Generate Prisma client
-pnpm prisma:generate
+pnpm generate
 
 # Run migrations
-pnpm prisma:migrate
-
-# (Optional) Seed database
-pnpm prisma db seed
+pnpm migrate:dev
 ```
 
 ### 5. Start Development Servers
 
 ```bash
-# Terminal 1: Auth service
-pnpm dev:auth
+# Option A: all services in parallel (recommended)
+pnpm dev:all
 
-# Terminal 2: Frontend
-pnpm dev:frontend
+# Option B: separate terminals
+pnpm dev:auth        # Auth service (port 3001)
+pnpm --filter todo-service dev   # Todo service (port 3002)
+pnpm dev:frontend    # Frontend (port 5173)
 ```
 
 Frontend: http://localhost:5173  
-Auth API: http://localhost:3001
+Auth API: http://localhost:3001  
+Todo API: http://localhost:3002
 
 ## Development Workflow
 
@@ -87,48 +96,44 @@ Auth API: http://localhost:3001
 # Start Postgres
 docker-compose up -d
 
-# Start services (separate terminals)
-pnpm dev:auth
-pnpm dev:frontend
+# Start all services
+pnpm dev:all
 ```
 
-Hot reload is enabled for both services.
+Hot reload is enabled for all services.
 
 ### Database Changes
 
+Schema and migrations are in `packages/db/prisma/`.
+
 ```bash
-cd services/auth-service
+cd packages/db
 
 # 1. Edit prisma/schema.prisma
-# 2. Create migration
-pnpm prisma:migrate --name your_migration_name
-
-# View database with Prisma Studio
-pnpm prisma:studio  # Opens at http://localhost:5555
+# 2. Create and apply migration
+pnpm migrate:dev -- --name your_migration_name
 ```
 
 ### Database Reset
 
 ```bash
-cd services/auth-service
+cd packages/db
 
 # Option 1: Prisma reset (deletes all data)
-pnpm prisma migrate reset
+pnpm migrate:reset
 
 # Option 2: Docker volumes reset
 docker-compose down -v
 docker-compose up -d
-pnpm prisma:migrate
+pnpm migrate:dev
 ```
 
 ## Testing & Quality
 
-### Commands
-
 ```bash
 # Run tests
 pnpm test
-pnpm test:auth  # Auth service only
+pnpm test:auth
 
 # Linting
 pnpm lint
@@ -142,16 +147,6 @@ pnpm format
 pnpm format:check
 ```
 
-### Manual Testing
-
-Access auth endpoints at http://localhost:3001:
-
-- POST `/api/auth/signup` - Create account
-- POST `/api/auth/login` - Login
-- GET `/api/auth/me` - Get current user (requires JWT)
-- POST `/api/auth/logout` - Logout
-- POST `/api/auth/refresh` - Refresh access token
-
 ## Troubleshooting
 
 **Port already in use:**
@@ -164,16 +159,16 @@ kill -9 <PID>  # Kill process
 **Database connection failed:**
 
 ```bash
-docker-compose ps  # Check Postgres is running
-docker-compose logs postgres  # View logs
-docker-compose restart postgres  # Restart
+docker-compose ps          # Check Postgres is running
+docker-compose logs postgres
+docker-compose restart postgres
 ```
 
 **Prisma client not generated:**
 
 ```bash
-cd services/auth-service
-pnpm prisma:generate
+cd packages/db
+pnpm generate
 ```
 
 **Module not found after adding package:**
@@ -187,5 +182,5 @@ pnpm install  # Reinstall workspace
 ```bash
 docker-compose down
 docker-compose up -d
-docker-compose logs -f  # View logs
+docker-compose logs -f
 ```

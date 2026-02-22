@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, IconButton, Link, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ChecklistIcon from '@mui/icons-material/Checklist';
 
 import { en } from '../../i18n';
 import styles from './AuthLayout.module.scss';

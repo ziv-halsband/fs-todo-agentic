@@ -18,6 +18,9 @@ router.get('/', authenticate, todoController.getAllTodos);
 // Get todo statistics (must be before /:id to avoid conflicts)
 router.get('/stats', authenticate, todoController.getTodoStats);
 
+// Get incomplete task counts grouped by list (must be before /:id)
+router.get('/count', authenticate, todoController.getCountsByList);
+
 // Get a single todo by ID
 router.get('/:id', authenticate, todoController.getTodoById);
 

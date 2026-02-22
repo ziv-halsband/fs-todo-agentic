@@ -2,24 +2,18 @@ import { create } from 'zustand';
 
 interface TaskStore {
   selectedListId: string | null;
-  selectedFilter: 'all' | 'todo' | 'in-progress' | 'completed' | 'starred';
   searchTerm: string;
 
   setSelectedList: (id: string | null) => void;
-  setFilter: (
-    filter: 'all' | 'todo' | 'in-progress' | 'completed' | 'starred'
-  ) => void;
   setSearchTerm: (term: string) => void;
-  resetFilter: () => void;
 }
 
 export const useTaskStore = create<TaskStore>((set) => ({
   selectedListId: null,
-  selectedFilter: 'all',
   searchTerm: '',
 
-  setSelectedList: (id) => set({ selectedListId: id }),
-  setFilter: (filter) => set({ selectedFilter: filter }),
+  // Switching list also clears the search so you never land on a filtered view
+  // of a new list with a stale search term from the previous one.
+  setSelectedList: (id) => set({ selectedListId: id, searchTerm: '' }),
   setSearchTerm: (term) => set({ searchTerm: term }),
-  resetFilter: () => set({ selectedFilter: 'all' }),
 }));
