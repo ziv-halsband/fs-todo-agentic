@@ -13,13 +13,14 @@ import { TODOS_QUERY_KEY } from '../lib/queryClient';
  * - staleTime: 30s (set on the QueryClient default).
  * - keepPreviousData: prevents a loading flash when changing page/filters.
  */
-export function useTodosQuery(filters: TodoQueryParams) {
+export function useTodosQuery(filters: TodoQueryParams, enabled = true) {
   const setTodos = useTodoStore((s) => s.setTodos);
 
   const query = useQuery({
     queryKey: [TODOS_QUERY_KEY, filters],
     queryFn: () => getTodos(filters),
     placeholderData: keepPreviousData,
+    enabled,
   });
 
   // Keep Zustand's todos in sync so toggleStar can look up the current value.

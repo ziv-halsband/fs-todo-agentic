@@ -30,20 +30,3 @@
   margin-bottom: 16px;
 }
 
-.completedSection {
-  margin-top: 8px;
-}
-
-.completedHeader {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  padding: 8px 4px;
-  color: #616161;
-  user-select: none;
-
-  &:hover {
-    color: #212121;
-  }
-}

@@ -6,7 +6,7 @@ A learning-focused full-stack application with microservices architecture. Imple
 
 ```
 ┌─────────────────────────────────┐
-│         Browser (React SPA)     │
+│         Browser (React SPA)
 │  Zustand + React Query + MUI v7 │
 └────────────┬──────────┬─────────┘
              │ HTTP     │ HTTP

@@ -3,27 +3,24 @@ import {
   Alert,
   Box,
   CircularProgress,
-  Collapse,
   Fab,
   FormControl,
   InputAdornment,
   MenuItem,
-  Pagination,
   Select,
   TextField,
   Typography,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
 import { useAuthStore } from '../../store/authStore';
 import { useTaskStore } from '../../store/taskStore';
 import { useTodoStore } from '../../store/todoStore';
 import { useTodosQuery } from '../../hooks/useTodosQuery';
+import { useDualTodosQuery } from '../../hooks/useDualTodosQuery';
 import { useDebounce } from '../../hooks/useDebounce';
-import { TaskItem } from '../../components/TaskItem';
+import { TaskSection } from '../../components/TaskSection';
 import { TaskFormModal } from '../../components/TaskFormModal';
 import type { Task } from '../../services/todoService';
 import styles from './TasksPage.module.scss';
@@ -47,48 +44,54 @@ export const TasksPage = () => {
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('open');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
-  const [page, setPage] = useState(1);
-  const [completedExpanded, setCompletedExpanded] = useState(true);
+  const [openPage, setOpenPage] = useState(1);
+  const [completedPage, setCompletedPage] = useState(1);
+  const [completedExpanded, setCompletedExpanded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
 
   const firstName = user?.fullName?.split(' ')[0] ?? 'there';
-
-  // Debounce search — input updates instantly, but the query key
-  // (and therefore the API call) only changes after 2 seconds of inactivity.
   const debouncedSearch = useDebounce(searchTerm, 2000);
 
-  // Build query params from current filter state.
-  const filters = {
+  const isDualMode = statusFilter === 'all';
+
+  const baseFilters = {
     ...(selectedListId && { listId: selectedListId }),
-    ...(statusFilter === 'open' && { completed: false }),
-    ...(statusFilter === 'completed' && { completed: true }),
     ...(priorityFilter !== 'all' && { priority: priorityFilter }),
     ...(debouncedSearch && { search: debouncedSearch }),
-    page,
-    limit: PAGE_SIZE,
   };
 
-  const { data, isLoading, isError } = useTodosQuery(filters);
+  // Dual mode: two independent queries for open + completed
+  const dual = useDualTodosQuery(
+    baseFilters,
+    openPage,
+    completedPage,
+    PAGE_SIZE,
+    isDualMode
+  );
 
-  const todos = data?.todos ?? [];
-  const total = data?.total ?? 0;
-  const pageCount = Math.ceil(total / PAGE_SIZE);
+  // Single mode: one query for either open or completed
+  const singleFilters = {
+    ...baseFilters,
+    ...(statusFilter === 'open' && { completed: false }),
+    ...(statusFilter === 'completed' && { completed: true }),
+    page: openPage,
+    limit: PAGE_SIZE,
+  };
+  const {
+    data: singleData,
+    isLoading: singleLoading,
+    isError: singleError,
+  } = useTodosQuery(singleFilters, !isDualMode);
 
-  // Load lists once on mount.
   useEffect(() => {
     fetchLists();
   }, [fetchLists]);
 
-  // Reset page when any filter (except page itself) changes.
   useEffect(() => {
-    setPage(1);
+    setOpenPage(1);
+    setCompletedPage(1);
   }, [selectedListId, statusFilter, priorityFilter, debouncedSearch]);
-
-  const activeTasks = todos.filter((t) => !t.completed);
-  const completedTasks = todos.filter((t) => t.completed);
-  const hasContent = todos.length > 0;
-  const showCompleted = statusFilter !== 'open';
 
   const sectionTitle = selectedListId
     ? (lists.find((l) => l.id === selectedListId)?.name ?? 'Tasks')
@@ -112,6 +115,20 @@ export const TasksPage = () => {
     setEditingTask(undefined);
   };
 
+  // Derive display values based on mode
+  const isLoading = isDualMode
+    ? dual.open.isLoading && dual.completed.isLoading
+    : singleLoading;
+  const isError = isDualMode
+    ? dual.open.isError || dual.completed.isError
+    : singleError;
+  const totalCount = isDualMode
+    ? dual.open.total + dual.completed.total
+    : (singleData?.total ?? 0);
+  const hasContent = isDualMode
+    ? dual.open.todos.length > 0 || dual.completed.todos.length > 0
+    : (singleData?.todos.length ?? 0) > 0;
+
   return (
     <Box className={styles.page}>
       <Box className={styles.greeting}>
@@ -130,7 +147,8 @@ export const TasksPage = () => {
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
-            setPage(1);
+            setOpenPage(1);
+            setCompletedPage(1);
           }}
           className={styles.searchBar}
           InputProps={{
@@ -145,10 +163,7 @@ export const TasksPage = () => {
         <FormControl size="small" sx={{ minWidth: 148 }}>
           <Select
             value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value as StatusFilter);
-              setPage(1);
-            }}
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
             renderValue={(v) =>
               `Status: ${v === 'all' ? 'All' : v === 'open' ? 'Open' : 'Completed'}`
             }
@@ -162,10 +177,9 @@ export const TasksPage = () => {
         <FormControl size="small" sx={{ minWidth: 148 }}>
           <Select
             value={priorityFilter}
-            onChange={(e) => {
-              setPriorityFilter(e.target.value as PriorityFilter);
-              setPage(1);
-            }}
+            onChange={(e) =>
+              setPriorityFilter(e.target.value as PriorityFilter)
+            }
             renderValue={(v) =>
               `Priority: ${v === 'all' ? 'All' : v.charAt(0).toUpperCase() + v.slice(1)}`
             }
@@ -183,9 +197,9 @@ export const TasksPage = () => {
           <Typography variant="subtitle1" fontWeight={700}>
             {sectionTitle}
           </Typography>
-          {total > 0 && (
+          {totalCount > 0 && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-              ({total} total)
+              ({totalCount} total)
             </Typography>
           )}
         </Box>
@@ -212,55 +226,46 @@ export const TasksPage = () => {
           </Typography>
         )}
 
-        {!isLoading &&
-          statusFilter !== 'completed' &&
-          activeTasks.map((task) => (
-            <TaskItem
-              key={task.id}
-              task={task}
+        {!isLoading && !isError && isDualMode && (
+          <>
+            <TaskSection
+              tasks={dual.open.todos}
+              total={dual.open.total}
+              page={openPage}
+              pageSize={PAGE_SIZE}
+              onPageChange={setOpenPage}
               onToggleComplete={handleToggleComplete}
               onEdit={handleOpenEdit}
+              isLoading={dual.open.isLoading}
             />
-          ))}
-
-        {!isLoading && showCompleted && completedTasks.length > 0 && (
-          <Box className={styles.completedSection}>
-            <Box
-              className={styles.completedHeader}
-              onClick={() => setCompletedExpanded((v) => !v)}
-            >
-              {completedExpanded ? (
-                <ExpandLessIcon fontSize="small" />
-              ) : (
-                <ExpandMoreIcon fontSize="small" />
-              )}
-              <Typography variant="body2" color="text.secondary">
-                Completed ({completedTasks.length})
-              </Typography>
-            </Box>
-            <Collapse in={completedExpanded}>
-              {completedTasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onToggleComplete={handleToggleComplete}
-                  onEdit={handleOpenEdit}
-                />
-              ))}
-            </Collapse>
-          </Box>
+            <TaskSection
+              tasks={dual.completed.todos}
+              total={dual.completed.total}
+              page={completedPage}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCompletedPage}
+              onToggleComplete={handleToggleComplete}
+              onEdit={handleOpenEdit}
+              isLoading={dual.completed.isLoading}
+              collapsible
+              collapsed={!completedExpanded}
+              onToggleCollapse={() => setCompletedExpanded((v) => !v)}
+              label="Completed"
+            />
+          </>
         )}
 
-        {!isLoading && pageCount > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 3, pb: 1 }}>
-            <Pagination
-              count={pageCount}
-              page={page}
-              onChange={(_, value) => setPage(value)}
-              size="small"
-              color="primary"
-            />
-          </Box>
+        {!isLoading && !isError && !isDualMode && singleData && (
+          <TaskSection
+            tasks={singleData.todos}
+            total={singleData.total}
+            page={openPage}
+            pageSize={PAGE_SIZE}
+            onPageChange={setOpenPage}
+            onToggleComplete={handleToggleComplete}
+            onEdit={handleOpenEdit}
+            isLoading={singleLoading}
+          />
         )}
       </Box>
 
