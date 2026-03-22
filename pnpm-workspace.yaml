@@ -1,4 +1,6 @@
 packages:
-  - "services/*"
-  - "frontend"
-  - "packages/*"
+  - services/*
+  - frontend
+  - packages/*
+
+storeDir: /Users/zivhalsband/projects/fs-project/.pnpm-store

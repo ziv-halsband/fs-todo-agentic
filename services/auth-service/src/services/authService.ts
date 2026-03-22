@@ -8,7 +8,6 @@ import {
   ConflictError,
 } from '@fs-project/backend-common';
 
-
 import { userRepository, type SafeUser } from '../repositories';
 import {
   hashPassword,
@@ -69,7 +68,7 @@ export class AuthService {
     // 2. Check if email already exists
     const emailExists = await userRepository.emailExists(email);
     if (emailExists) {
-      throw new ValidationError('User with this email already exists');
+      throw new ConflictError('User with this email already exists');
     }
 
     // 3. Hash password

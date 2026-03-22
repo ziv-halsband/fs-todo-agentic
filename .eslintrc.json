@@ -8,7 +8,12 @@
   "parserOptions": {
     "ecmaVersion": "latest",
     "sourceType": "module",
-    "project": ["./tsconfig.json", "./services/*/tsconfig.json", "./frontend/tsconfig.json"]
+    "project": [
+      "./tsconfig.json",
+      "./services/*/tsconfig.json",
+      "./services/*/tsconfig.test.json",
+      "./frontend/tsconfig.json"
+    ]
   },
   "plugins": ["@typescript-eslint", "import"],
   "extends": [
@@ -80,6 +85,16 @@
     "arrow-body-style": ["error", "as-needed"],
     "no-duplicate-imports": "error"
   },
+  "overrides": [
+    {
+      "files": ["**/__tests__/**/*.ts", "**/*.test.ts"],
+      "rules": {
+        "@typescript-eslint/no-unsafe-member-access": "off",
+        "@typescript-eslint/no-unsafe-assignment": "off",
+        "@typescript-eslint/no-unsafe-call": "off"
+      }
+    }
+  ],
   "ignorePatterns": [
     "node_modules/",
     "dist/",
@@ -87,6 +102,8 @@
     "coverage/",
     "*.config.js",
     "*.config.ts",
+    "jest.globalSetup.js",
+    "jest.globalTeardown.js",
     ".eslintrc.js",
     "frontend/"
   ]

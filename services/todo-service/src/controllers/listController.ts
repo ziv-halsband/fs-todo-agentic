@@ -16,7 +16,17 @@ export const getAllLists = async (
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
-    const lists = await listRepository.findAllByUserId(userId);
+    let lists = await listRepository.findAllByUserId(userId);
+
+    // Ensure every user always has at least one list
+    if (lists.length === 0) {
+      const defaultList = await listRepository.create({
+        name: 'Default',
+        userId,
+      });
+      lists = [defaultList];
+    }
+
     return res.status(200).json({ success: true, data: { lists } });
   } catch (error) {
     next(error);

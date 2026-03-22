@@ -4,9 +4,44 @@
 
 - **Node.js** >= 22.0.0 (v22.21.0 specified in `.nvmrc`)
 - **pnpm** >= 10.0.0 (`npm install -g pnpm`)
-- **Docker Desktop** for running Postgres
+- **Docker Desktop** — required for running Postgres locally
 
-## Initial Setup
+## Run Modes
+
+There are two ways to run the project locally. Pick one.
+
+### Mode 1 — Full local (recommended for active development)
+
+Everything runs as local processes. Only Postgres runs in Docker.
+
+```
+Browser → Frontend :5173 (pnpm dev)
+              ↓
+       Auth Service :3001 (pnpm dev, tsx watch — instant hot reload)
+       Todo Service :3002 (pnpm dev, tsx watch — instant hot reload)
+              ↓
+       Postgres :5432 (Docker container)
+```
+
+### Mode 2 — Services in Docker (closer to production)
+
+Frontend runs locally; services and Postgres run as Docker containers.
+
+```
+Browser → Frontend :5173 (pnpm dev)
+              ↓  (ports already mapped by docker-compose)
+       Auth Service :3001 (Docker container)
+       Todo Service :3002 (Docker container)
+              ↓
+       Postgres :5432 (Docker container)
+```
+
+Start with: `docker compose up -d` (starts all three containers).  
+For file-watch rebuilds: `make watch` — Docker Desktop 4.24+ watches `services/*/src` and rebuilds the container on change. This is a **full container rebuild** (slower than Mode 1's instant tsx hot reload).
+
+---
+
+## First-Time Setup (Mode 1)
 
 ### 1. Clone and Install
 
@@ -14,93 +49,92 @@
 git clone <your-repo-url>
 cd fs-project
 
-# Use correct Node version (if using nvm)
-nvm use
-
-# Install dependencies
-pnpm install
+nvm use          # use correct Node version (requires nvm)
+pnpm install     # install all workspace dependencies
 ```
 
-### 2. Environment Configuration
+### 2. Environment Files
 
-**Root `.env`** (used by `packages/db` Prisma commands):
+Copy the example files and fill in any missing values.
 
-- `DATABASE_URL` - Postgres connection string
+| File                         | Used by                           |
+| ---------------------------- | --------------------------------- |
+| `.env`                       | `packages/db` Prisma CLI commands |
+| `services/auth-service/.env` | Auth service at runtime           |
+| `services/todo-service/.env` | Todo service at runtime           |
+| `frontend/.env` (optional)   | Override default API URLs         |
 
-**Auth Service** (`services/auth-service/.env`):
+Frontend defaults (no `.env` needed unless overriding):
 
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `JWT_EXPIRES_IN`
-- `REFRESH_TOKEN_EXPIRES_IN`
-- `CORS_ORIGIN`
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`
-- `FRONTEND_URL`
+- Auth service: `http://localhost:3001`
+- Todo service: `http://localhost:3002`
 
-**Todo Service** (`services/todo-service/.env`):
-
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `CORS_ORIGIN`
-
-**Frontend** (`frontend/.env`):
-
-- `VITE_API_URL` - Auth service URL (default: `http://localhost:3001`)
-- `VITE_TODO_API_URL` - Todo service URL (default: `http://localhost:3002`)
-
-### 3. Start Infrastructure
+### 3. Start Postgres
 
 ```bash
-# Start Postgres
-docker-compose up -d
-
-# Verify it's running
-docker-compose ps
+docker compose up -d postgres
 ```
 
-### 4. Database Setup
+### 4. Build the db package + run migrations
 
-Prisma schema and migrations live in `packages/db`.
+This must be done once after cloning, and again after any schema change.
 
 ```bash
 cd packages/db
 
-# Generate Prisma client
+# Step 1: generate the Prisma client (creates src/generated/prisma/)
 pnpm generate
 
-# Run migrations
-pnpm migrate:dev
+# Step 2: compile + copy generated files to dist/
+# (Node.js loads from dist/, not src/)
+pnpm build
+
+# Step 3: apply migrations to the database
+pnpm migrate:deploy
 ```
+
+Why all three steps? See [ARCHITECTURE.md](./ARCHITECTURE.md) and the `@fs-project/db` section.
 
 ### 5. Start Development Servers
 
-```bash
-# Option A: all services in parallel (recommended)
-pnpm dev:all
+Open three terminals:
 
-# Option B: separate terminals
-pnpm dev:auth        # Auth service (port 3001)
-pnpm --filter todo-service dev   # Todo service (port 3002)
-pnpm dev:frontend    # Frontend (port 5173)
+```bash
+# Terminal 1 — Auth service (port 3001)
+cd services/auth-service && pnpm dev
+
+# Terminal 2 — Todo service (port 3002)
+cd services/todo-service && pnpm dev
+
+# Terminal 3 — Frontend (port 5173)
+cd frontend && pnpm dev
 ```
 
-Frontend: http://localhost:5173  
-Auth API: http://localhost:3001  
-Todo API: http://localhost:3002
-
-## Development Workflow
-
-### Daily Development
+Or start all in parallel from the root:
 
 ```bash
-# Start Postgres
-docker-compose up -d
-
-# Start all services
 pnpm dev:all
 ```
 
-Hot reload is enabled for all services.
+**URLs:**
+
+- Frontend: http://localhost:5173
+- Auth API: http://localhost:3001
+- Todo API: http://localhost:3002
+
+---
+
+## Daily Development (Mode 1)
+
+```bash
+# 1. Make sure Postgres is running
+docker compose up -d postgres
+
+# 2. Start all services
+pnpm dev:all
+```
+
+Hot reload is enabled for all services — save a file, the service restarts instantly.
 
 ### Database Changes
 
@@ -164,12 +198,15 @@ docker-compose logs postgres
 docker-compose restart postgres
 ```
 
-**Prisma client not generated:**
+**Prisma client not found / `Cannot find module './generated/prisma'`:**
 
 ```bash
 cd packages/db
-pnpm generate
+pnpm generate   # regenerate the client into src/generated/
+pnpm build      # compile + copy to dist/ — this is what Node.js actually loads
 ```
+
+Both steps are required. `generate` alone is not enough for runtime.
 
 **Module not found after adding package:**
 
