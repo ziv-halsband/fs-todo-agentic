@@ -91,7 +91,10 @@ export class AuthService {
     const accessToken = generateAccessToken(tokenPayload);
     const refreshToken = generateRefreshToken(tokenPayload);
 
-    // 6. Return user + tokens
+    // 6. Create default list for the new user (fire-and-forget)
+    void this.createDefaultList(accessToken);
+
+    // 7. Return user + tokens
     return {
       user,
       accessToken,
@@ -273,6 +276,7 @@ export class AuthService {
     const existingUser = await userRepository.findByEmail(email);
 
     let finalUser: SafeUser;
+    let isNewUser = false;
 
     if (existingUser) {
       // User exists - check if it's the same provider
@@ -308,6 +312,7 @@ export class AuthService {
         provider,
         providerId,
       });
+      isNewUser = true;
     }
 
     // Generate JWT tokens
@@ -320,11 +325,39 @@ export class AuthService {
     const accessToken = generateAccessToken(tokenPayload);
     const refreshToken = generateRefreshToken(tokenPayload);
 
+    // Create default list for brand-new OAuth users (fire-and-forget)
+    if (isNewUser) {
+      void this.createDefaultList(accessToken);
+    }
+
     return {
       user: finalUser,
       accessToken,
       refreshToken,
     };
+  }
+
+  /**
+   * Create a "Default" list for a newly registered user.
+   *
+   * Called fire-and-forget after user creation — signup still succeeds
+   * even if the todo-service is temporarily unavailable.
+   */
+  private async createDefaultList(accessToken: string): Promise<void> {
+    const todoServiceUrl =
+      process.env.TODO_SERVICE_URL || 'http://localhost:3002';
+    try {
+      await fetch(`${todoServiceUrl}/api/lists`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ name: 'Default' }),
+      });
+    } catch {
+      // Non-fatal: todo-service may be starting up or temporarily unavailable
+    }
   }
 }
 

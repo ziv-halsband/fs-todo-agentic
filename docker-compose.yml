@@ -58,6 +58,7 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_CALLBACK_URL: http://localhost:3001/auth/google/callback
       FRONTEND_URL: http://localhost:5173
+      TODO_SERVICE_URL: http://todo-service:3002
 
     ports:
       - "3001:3001"

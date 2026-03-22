@@ -21,6 +21,7 @@ import { useTodosQuery } from '../../hooks/useTodosQuery';
 import { useDualTodosQuery } from '../../hooks/useDualTodosQuery';
 import { useDebounce } from '../../hooks/useDebounce';
 import { TaskSection } from '../../components/TaskSection';
+import { EmptyState } from '../../components/EmptyState';
 import { TaskFormModal } from '../../components/TaskFormModal';
 import type { Task } from '../../services/todoService';
 import styles from './TasksPage.module.scss';
@@ -51,7 +52,8 @@ export const TasksPage = () => {
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
 
   const firstName = user?.fullName?.split(' ')[0] ?? 'there';
-  const debouncedSearch = useDebounce(searchTerm, 2000);
+  const debouncedSearch = useDebounce(searchTerm, 400);
+  const isSearchPending = searchTerm !== debouncedSearch;
 
   const isDualMode = statusFilter === 'all';
 
@@ -157,6 +159,11 @@ export const TasksPage = () => {
                 <SearchIcon fontSize="small" sx={{ color: '#9E9E9E' }} />
               </InputAdornment>
             ),
+            endAdornment: isSearchPending ? (
+              <InputAdornment position="end">
+                <CircularProgress size={16} thickness={5} />
+              </InputAdornment>
+            ) : undefined,
           }}
         />
 
@@ -217,13 +224,13 @@ export const TasksPage = () => {
         )}
 
         {!isLoading && !isError && !hasContent && (
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ py: 6, textAlign: 'center' }}
-          >
-            No tasks found
-          </Typography>
+          <EmptyState
+            message={
+              debouncedSearch
+                ? `No results for "${debouncedSearch}"`
+                : 'No tasks found'
+            }
+          />
         )}
 
         {!isLoading && !isError && isDualMode && (
