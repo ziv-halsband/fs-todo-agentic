@@ -13,14 +13,10 @@
  */
 
 import { AuthProvider } from '@fs-project/common';
-import dotenv from 'dotenv';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 
 import { authService } from '../services';
-
-// Load environment variables FIRST
-dotenv.config({ override: true });
 
 /**
  * Configure Google OAuth Strategy
