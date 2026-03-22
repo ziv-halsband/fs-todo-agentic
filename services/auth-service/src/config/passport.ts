@@ -13,10 +13,15 @@
  */
 
 import { AuthProvider } from '@fs-project/common';
+import dotenv from 'dotenv';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 
 import { authService } from '../services';
+
+// Load env vars if not already present (safe: won't override what globalSetup
+// or the shell already set — specifically won't clobber DATABASE_URL in tests).
+dotenv.config();
 
 /**
  * Configure Google OAuth Strategy
